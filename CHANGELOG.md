@@ -10,3 +10,6 @@ Record D1 implementation, D1 feedback fixes, D2 additions and D3 changes here.
 - 2026-10-03: Implemented `DomainRules.requireDuration` (1–24 hours inclusive) and
   `DomainRules.requireIdentifier` (non-null, `[A-Z][A-Z0-9_-]{0,15}`). Both reject invalid
   input with `IllegalArgumentException`. Public duration and identifier checks now pass.
+- 2026-10-03: Added `Booking` with validated id, space id, duration (1–24) and version (≥ 0);
+  private final fields with getters and no setters. Added nine JUnit tests in `StudentTests`
+  covering D1-A, D1-B, invalid identifiers, negative version and getters.
