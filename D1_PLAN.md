@@ -63,12 +63,12 @@ Implemented in `src/DomainRules.java`.
 
 Done when: `bash run.sh compile` prints `COMPILE_OK` and the tests pass.
 
-## Step 3: `Space` class
+## Step 3: `Space` class ✅
 
-- [ ] Fields: id, open, occupied, accessible `[Overview]`
-- [ ] "Available" means open and not occupied `[Overview]`; put it in an `isAvailable()` method `[Suggestion]`
-- [ ] Validate the id in the constructor `[D1.1]`
-- [ ] Tests: B12 available; A17 and D09 not available; invalid id rejected `[Suggestion]`
+- [x] Fields: id, open, occupied, accessible `[Overview]`
+- [x] "Available" means open and not occupied `[Overview]`; put it in an `isAvailable()` method `[Suggestion]`
+- [x] Validate the id in the constructor `[D1.1]`
+- [x] Tests: B12 available; A17 and D09 not available; invalid id rejected `[Suggestion]`
 
 ## Step 4: `Proposal` class and status
 

@@ -13,3 +13,7 @@ Record D1 implementation, D1 feedback fixes, D2 additions and D3 changes here.
 - 2026-10-03: Added `Booking` with validated id, space id, duration (1–24) and version (≥ 0);
   private final fields with getters and no setters. Added nine JUnit tests in `StudentTests`
   covering D1-A, D1-B, invalid identifiers, negative version and getters.
+- 2026-10-03: Added `Space` with a validated id and open, occupied and accessible flags;
+  private final fields with getters and no setters. `isAvailable()` returns open and not
+  occupied, matching the brief's definition. Added seven JUnit tests in `StudentTests`
+  covering availability (B12, D09, A17, closed but empty), invalid identifiers and getters.

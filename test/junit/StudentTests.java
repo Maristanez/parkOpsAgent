@@ -62,4 +62,50 @@ public class StudentTests {
         assertEquals(0, b.getVersion());
         assertTrue(b.requiresAccessible());
     }
+
+    // Space availability: open and not occupied
+    @Test
+    void spaceB12IsAvailable() {
+        Space s = new Space("B12", true, false, false);
+        assertTrue(s.isAvailable());
+    }
+
+    @Test
+    void spaceD09IsNotAvailableBecauseOccupied() {
+        Space s = new Space("D09", true, true, true);
+        assertFalse(s.isAvailable());
+    }
+
+    @Test
+    void spaceA17IsNotAvailableBecauseClosedAndOccupied() {
+        Space s = new Space("A17", false, true, false);
+        assertFalse(s.isAvailable());
+    }
+
+    @Test
+    void spaceClosedButEmptyIsNotAvailable() {
+        Space s = new Space("X1", false, false, false);
+        assertFalse(s.isAvailable());
+    }
+
+    // Invalid space identifiers are rejected
+    @Test
+    void spaceRejectsNullId() {
+        assertThrows(IllegalArgumentException.class, () -> new Space(null, true, false, false));
+    }
+
+    @Test
+    void spaceRejectsLowercaseId() {
+        assertThrows(IllegalArgumentException.class, () -> new Space("b12", true, false, false));
+    }
+
+    // Getters return what the constructor received
+    @Test
+    void spaceKeepsAllFields() {
+        Space s = new Space("C03", true, false, true);
+        assertEquals("C03", s.getId());
+        assertTrue(s.isOpen());
+        assertFalse(s.isOccupied());
+        assertTrue(s.isAccessible());
+    }
 }
