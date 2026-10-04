@@ -1,7 +1,7 @@
 // Add focused @org.junit.jupiter.api.Test methods here.
 // Create fresh objects for each test and assert results AND unchanged state on rejection.
 // The supplied wrapper is not a substitute for your own test design.
-iimport org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class StudentTests {
