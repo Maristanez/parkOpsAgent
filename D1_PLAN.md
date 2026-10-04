@@ -55,10 +55,10 @@ Implemented in `src/DomainRules.java`.
 
 ## Step 2: `Booking` class (in progress)
 
-- [ ] Fields: id, assigned space id, duration, booking version, requires-accessible flag `[Overview]`
-- [ ] Constructor validates id, space id and duration before storing anything, so no invalid booking can exist `[D1.1]` `[D1-B]`
-- [ ] Version must be ≥ 0 `[Suggestion]`
-- [ ] Private final fields, getters, no setters `[Suggestion]` (the requirement is "controlled state access" `[D1.1]`)
+- [x] Fields: id, assigned space id, duration, booking version, requires-accessible flag `[Overview]`
+- [x] Constructor validates id, space id and duration before storing anything, so no invalid booking can exist `[D1.1]` `[D1-B]`
+- [x] Version must be ≥ 0 `[Suggestion]`
+- [x] Private final fields, getters, no setters `[Suggestion]` (the requirement is "controlled state access" `[D1.1]`)
 - [ ] Tests: durations 1 and 24 kept `[D1-A]`; 0 and 25 rejected `[D1-B]`; null and malformed ids rejected `[D1.4]`
 
 Done when: `bash run.sh compile` prints `COMPILE_OK` and the tests pass.
