@@ -24,10 +24,28 @@ public final class Booking{
         this.spaceId = spaceId;
         this.durationHours = durationHours;
         this.version = version;
-        this.requiresAcessible = requiresAccessible;
+        this.requiresAccessible = requiresAccessible;
     }
 
+    public String getId(){
+        return id;
+    }
 
+    public String getSpaceId(){
+        return spaceId;
+    }
+
+    public int getDurationHours(){
+        return durationHours;
+    }
+
+    public int getVersion(){
+        return version;
+    }
+
+    public boolean requiresAccessible(){
+        return requiresAccessible;
+    }
 
     
 
