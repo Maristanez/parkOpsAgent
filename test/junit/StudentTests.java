@@ -108,4 +108,55 @@ public class StudentTests {
         assertFalse(s.isOccupied());
         assertTrue(s.isAccessible());
     }
+
+    // A new proposal is always pending
+    @Test
+    void newProposalIsPending() {
+        Proposal p = new Proposal("P1", "B1", "B12", 0, 1);
+        assertEquals(ProposalStatus.PENDING, p.getStatus());
+    }
+
+    // Getters return what the constructor received
+    @Test
+    void proposalKeepsAllFields() {
+        Proposal p = new Proposal("P1", "B1", "B12", 0, 1);
+        assertEquals("P1", p.getProposalId());
+        assertEquals("B1", p.getBookingId());
+        assertEquals("B12", p.getTargetId());
+        assertEquals(0, p.getObservedBookingVersion());
+        assertEquals(1, p.getObservedPolicyVersion());
+    }
+
+    // Invalid proposal input is rejected
+    @Test
+    void proposalRejectsNullId() {
+        assertThrows(IllegalArgumentException.class, () -> new Proposal(null, "B1", "B12", 0, 1));
+    }
+
+    @Test
+    void proposalRejectsLowercaseTarget() {
+        assertThrows(IllegalArgumentException.class, () -> new Proposal("P1", "B1", "b12", 0, 1));
+    }
+
+    @Test
+    void proposalRejectsNegativeBookingVersion() {
+        assertThrows(IllegalArgumentException.class, () -> new Proposal("P1", "B1", "B12", -1, 1));
+    }
+
+    @Test
+    void proposalRejectsPolicyVersionZero() {
+        assertThrows(IllegalArgumentException.class, () -> new Proposal("P1", "B1", "B12", 0, 0));
+    }
+
+    // The view carries the same values, with the status as a String
+    @Test
+    void proposalViewMatchesProposal() {
+        ProposalView v = new Proposal("P1", "B1", "B12", 0, 1).toView();
+        assertEquals("P1", v.proposalId());
+        assertEquals("B1", v.bookingId());
+        assertEquals("B12", v.targetId());
+        assertEquals(0, v.bookingVersion());
+        assertEquals(1, v.policyVersion());
+        assertEquals("PENDING", v.status());
+    }
 }

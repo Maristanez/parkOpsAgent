@@ -70,14 +70,14 @@ Done when: `bash run.sh compile` prints `COMPILE_OK` and the tests pass.
 - [x] Validate the id in the constructor `[D1.1]`
 - [x] Tests: B12 available; A17 and D09 not available; invalid id rejected `[Suggestion]`
 
-## Step 4: `Proposal` class and status
+## Step 4: `Proposal` class and status ✅
 
-- [ ] Fields: proposal id, booking id, target space id, observed booking version, observed policy version, status `[Overview]`
-- [ ] Statuses: `PENDING`, `APPROVED`, `REJECTED`, `EXECUTED` `[Overview]`, as a `ProposalStatus` enum `[Suggestion]`
-- [ ] A new proposal starts as `PENDING`; no public way to set the status `[Suggestion]` (the model never supplies approval `[Overview]`)
-- [ ] Keep proposals separate from bookings: a proposal is not a completed change `[D1.1]`
-- [ ] Method that converts a `Proposal` to the supplied `ProposalView` record `[Starter]`
-- [ ] Tests: new proposal is `PENDING` and keeps the versions it was given; invalid ids rejected `[Suggestion]`
+- [x] Fields: proposal id, booking id, target space id, observed booking version, observed policy version, status `[Overview]`
+- [x] Statuses: `PENDING`, `APPROVED`, `REJECTED`, `EXECUTED` `[Overview]`, as a `ProposalStatus` enum `[Suggestion]`
+- [x] A new proposal starts as `PENDING`; no public way to set the status `[Suggestion]` (the model never supplies approval `[Overview]`)
+- [x] Keep proposals separate from bookings: a proposal is not a completed change `[D1.1]`
+- [x] Method that converts a `Proposal` to the supplied `ProposalView` record `[Starter]`
+- [x] Tests: new proposal is `PENDING` and keeps the versions it was given; invalid ids rejected `[Suggestion]`
 
 ## Step 5: Policy v1 eligibility check
 
@@ -158,6 +158,14 @@ At most 4 pages, not counting the two diagrams if they are on their own pages `[
 - [ ] The most important current limitation `[D1.5]`
 - [ ] Which starter infrastructure you reused and which parts you wrote `[D1.5]`
 - [ ] Include the two diagrams `[D1.2]`
+
+### Design decisions to write up
+
+Recorded as they are made, so DESIGN.pdf has material ready. Each one can serve as the "alternative considered" `[D1.5]`.
+
+| Decision | Where | Alternative rejected | Why |
+|---|---|---|---|
+| Proposal status is an enum with exactly `PENDING`, `APPROVED`, `REJECTED`, `EXECUTED` | `ProposalStatus`, `Proposal.getStatus()` | Store the status as a `String` | The compiler only accepts the four real statuses, so a typo like `"PENDNG"` cannot compile, and a proposal can never hold a status the brief doesn't define. `Proposal.toView()` converts it with `status.name()` because `ProposalView` needs a `String`. |
 
 ## Step 13: README, CHANGELOG, AI_USE
 

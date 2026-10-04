@@ -17,3 +17,8 @@ Record D1 implementation, D1 feedback fixes, D2 additions and D3 changes here.
   private final fields with getters and no setters. `isAvailable()` returns open and not
   occupied, matching the brief's definition. Added seven JUnit tests in `StudentTests`
   covering availability (B12, D09, A17, closed but empty), invalid identifiers and getters.
+- 2026-10-04: Added `ProposalStatus` enum (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`) and
+  `Proposal` with validated proposal, booking and target ids, observed booking version (≥ 0)
+  and observed policy version (≥ 1). Status always starts `PENDING` and has no setter.
+  `toView()` converts to the supplied `ProposalView`. Added seven JUnit tests in `StudentTests`
+  covering the initial status, getters, invalid input and the view.
