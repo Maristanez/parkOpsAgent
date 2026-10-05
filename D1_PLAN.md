@@ -139,25 +139,25 @@ One way to capture everything at once `[Suggestion]`:
 - [x] For each case D1-A to D1-F: preconditions, input, expected result, actual result, test method name `[Starter]`
 - [x] For each rejection case, list the outcome **and** every field that stays unchanged `[Starter]`
 
-## Step 11: Diagrams (after the code stops changing)
+## Step 11: Diagrams (after the code stops changing) ✅
 
-- [ ] **Class diagram:** your domain and application classes, visibility, important associations, multiplicities `[D1.2]`
-- [ ] Use the realization arrow (dashed line, hollow triangle) for interfaces, not the inheritance arrow `[D1.2]`
-- [ ] **Sequence diagram:** read B1 → evaluate B12 → create pending proposal `[D1.2]`
-- [ ] Mark the **approval boundary** on the sequence diagram, even though approval comes in D2 `[D1.2]`
-- [ ] Both match the submitted code and are readable in PDF `[D1.2]`
-- [ ] Tool: draw.io or PlantUML, exported to PDF `[Suggestion]`
+- [x] **Class diagram:** your domain and application classes, visibility, important associations, multiplicities `[D1.2]`
+- [x] Use the realization arrow (dashed line, hollow triangle) for interfaces, not the inheritance arrow `[D1.2]`
+- [x] **Sequence diagram:** read B1 → evaluate B12 → create pending proposal `[D1.2]`
+- [x] Mark the **approval boundary** on the sequence diagram, even though approval comes in D2 `[D1.2]`
+- [x] Both match the submitted code and are readable in PDF `[D1.2]`
+- [x] Drawn by `design/build.py` (SVG, printed to PDF by Chrome). Re-run `python3 design/build.py` after code changes so the diagrams keep matching `[Suggestion]`
 
-## Step 12: `DESIGN.pdf`
+## Step 12: `DESIGN.pdf` ✅
 
 At most 4 pages, not counting the two diagrams if they are on their own pages `[D1.5]`. Refer to exact class and method names `[D1.5]`.
 
-- [ ] Responsibilities of each class `[D1.5]`
-- [ ] One alternative you considered and why you rejected it `[D1.5]` (e.g. immutable `Booking` vs. one controlled method that changes it `[Suggestion]`)
-- [ ] Two informal operation contracts: preconditions, postconditions, what may change `[D1.5]` (e.g. `propose`, `Booking` constructor `[Suggestion]`)
-- [ ] The most important current limitation `[D1.5]`
-- [ ] Which starter infrastructure you reused and which parts you wrote `[D1.5]`
-- [ ] Include the two diagrams `[D1.2]`
+- [x] Responsibilities of each class `[D1.5]`
+- [x] One alternative you considered and why you rejected it `[D1.5]` (e.g. immutable `Booking` vs. one controlled method that changes it `[Suggestion]`)
+- [x] Two informal operation contracts: preconditions, postconditions, what may change `[D1.5]` (e.g. `propose`, `Booking` constructor `[Suggestion]`)
+- [x] The most important current limitation `[D1.5]`
+- [x] Which starter infrastructure you reused and which parts you wrote `[D1.5]`
+- [x] Include the two diagrams `[D1.2]`
 
 ### Design decisions to write up
 
@@ -176,7 +176,7 @@ Recorded as they are made, so DESIGN.pdf has material ready. Each one can serve 
 - [x] `README.md`: JDK version, exact commands, supported scenarios, known limitations, starter files reused `[Overview]`
 - [x] `README.md`: how your class and method names map to the brief's terms `[Starter]`
 - [x] `CHANGELOG.md`: one line per completed step `[Starter]`
-- [ ] `AI_USE.md`: a row for each AI-assisted task with tool, date, task, files, what you changed or rejected, and how you checked it `[Overview]`
+- [x] `AI_USE.md`: a row for each AI-assisted task with tool, date, task, files, what you changed or rejected, and how you checked it `[Overview]`
   - still missing: the `DomainRules` row
 
 ## Step 14: Package and submit
