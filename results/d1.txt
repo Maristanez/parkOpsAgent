@@ -1,0 +1,65 @@
+ParkOps D1 evidence. Genuine output captured by running the commands below from the project root.
+Date: Sun Oct  4 22:39:46 EDT 2026
+Environment: Darwin 25.5.0
+openjdk version "21.0.12.1" 2026-08-18
+OpenJDK Runtime Environment Homebrew (build 21.0.12.1)
+OpenJDK 64-Bit Server VM Homebrew (build 21.0.12.1, mixed mode, sharing)
+
+$ bash run.sh compile
+COMPILE_OK (warnings, if any, are printed above)
+
+$ bash run.sh check        # plain-Java public checks, not JUnit
+PASS duration endpoints
+PASS invalid duration 0
+PASS invalid duration 25
+PASS invalid duration -1
+PASS invalid identifier null
+PASS invalid identifier 
+PASS invalid identifier b1
+PASS invalid identifier 1B
+PASS invalid identifier ABCDEFGHIJKLMNOPQ
+PASS valid identifiers
+PASS D1-C pending B12, no booking change
+PASS D1-D occupied D09 rejected unchanged
+PASS D1-E unknown target rejected unchanged
+PASS D1-F protected snapshot
+CHECKS 14; FAILED 0
+
+$ bash run.sh test         # JUnit Jupiter 6.0.3
+
+Thanks for using JUnit! Support its development at https://junit.org/sponsoring
+
+INFRASTRUCTURE_CHECKS_PASS 31; localhost fake HTTP only; no live model or project solution verified.
+
+Test run finished after 171 ms
+[         7 containers found      ]
+[         0 containers skipped    ]
+[         7 containers started    ]
+[         0 containers aborted    ]
+[         7 containers successful ]
+[         0 containers failed     ]
+[        55 tests found           ]
+[         0 tests skipped         ]
+[        55 tests started         ]
+[         0 tests aborted         ]
+[        55 tests successful      ]
+[         0 tests failed          ]
+
+
+$ bash run.sh run scripted # D1 demonstration; replay input, not a live model run
+REPLAY D1 input: not a live model run; approval/execution are not invoked.
+
+Scripted target: B12
+PROPOSED ProposalView[proposalId=P1, bookingId=B1, targetId=B12, bookingVersion=0, policyVersion=1, status=PENDING]
+AWAITING_APPROVAL: operator decision required; nothing approved or executed.
+Booking: {"id":"B1","spaceId":"A17","durationHours":3,"version":0,"requiresAccessible":true}
+
+Scripted target: D09
+REJECTED: Target D09 is not eligible under policy version 1
+Booking: {"id":"B1","spaceId":"A17","durationHours":3,"version":0,"requiresAccessible":true}
+
+Scripted target: Z99
+REJECTED: Unknown target space: Z99
+Booking: {"id":"B1","spaceId":"A17","durationHours":3,"version":0,"requiresAccessible":true}
+
+Stored proposals: 1

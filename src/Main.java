@@ -14,11 +14,25 @@ public final class Main {
         try {
             if(mode.equals("scripted")) {
                 System.out.println("REPLAY D1 input: not a live model run; approval/execution are not invoked.");
-                ReplayProvider replay=new ReplayProvider(List.of(Fixture.proposalRequest("B12")));
-                var input=MiniJson.object(MiniJson.parse(replay.next(List.of(new ChatMessage("user","Propose a replacement for B1")))));
-                ProposalView p=app.propose((String)input.get("targetId"));
-                System.out.println(p);
-                System.out.println("Booking: "+MiniJson.stringify(app.bookingSnapshot()));
+                // D1.3: the eligible B12, then the occupied D09 and an unknown target
+                List<String> targets=List.of("B12","D09","Z99");
+                ReplayProvider replay=new ReplayProvider(targets.stream().map(Fixture::proposalRequest).toList());
+                for(int i=0;i<targets.size();i++) {
+                    var input=MiniJson.object(MiniJson.parse(replay.next(List.of(new ChatMessage("user","Propose a replacement for B1")))));
+                    String target=(String)input.get("targetId");
+                    System.out.println();
+                    System.out.println("Scripted target: "+target);
+                    try {
+                        ProposalView p=app.propose(target);
+                        System.out.println("PROPOSED "+p);
+                        System.out.println("AWAITING_APPROVAL: operator decision required; nothing approved or executed.");
+                    } catch(IllegalArgumentException ex) {
+                        System.out.println("REJECTED: "+ex.getMessage());
+                    }
+                    System.out.println("Booking: "+MiniJson.stringify(app.bookingSnapshot()));
+                }
+                System.out.println();
+                System.out.println("Stored proposals: "+app.proposals().size());
             } else if(mode.equals("agent-scripted")) {
                 System.out.println("REPLAY D2 workflow; not a live model run.");
                 System.out.println(app.run(Fixture.replay(),6));

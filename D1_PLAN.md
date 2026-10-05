@@ -79,49 +79,49 @@ Done when: `bash run.sh compile` prints `COMPILE_OK` and the tests pass.
 - [x] Method that converts a `Proposal` to the supplied `ProposalView` record `[Starter]`
 - [x] Tests: new proposal is `PENDING` and keeps the versions it was given; invalid ids rejected `[Suggestion]`
 
-## Step 5: Policy v1 eligibility check
+## Step 5: Policy v1 eligibility check ✅
 
-- [ ] Eligible means: target is not the booking's current space **and** target is available `[Overview]`
-- [ ] Ignore the accessibility flag; that is the D3 change `[Overview]`
-- [ ] Put the rule in one method with the policy version (1) beside it `[Suggestion]`
-- [ ] Tests: B12 and C03 eligible; A17 and D09 not `[Suggestion]`
+- [x] Eligible means: target is not the booking's current space **and** target is available `[Overview]`
+- [x] Ignore the accessibility flag; that is the D3 change `[Overview]`
+- [x] Put the rule in one method with the policy version (1) beside it `[Suggestion]`
+- [x] Tests: B12 and C03 eligible; A17 and D09 not `[Suggestion]`
 
-## Step 6: `StudentApplication` storage and snapshot
+## Step 6: `StudentApplication` storage and snapshot ✅
 
-- [ ] Replace the raw `Map` with your `Booking`, the spaces, and the stored proposals `[Starter]`
+- [x] Replace the raw `Map` with your `Booking`, the spaces, and the stored proposals `[Starter]`
   - spaces in a private map keyed by id, proposals in a private list, a counter for proposal ids `[Suggestion]`
-- [ ] Never return an internal collection that callers could change `[D1.1]`
-- [ ] `bookingSnapshot()` returns a fresh map that keeps the `"spaceId"` and `"version"` keys `[Starter]`
-- [ ] Two `StudentApplication` objects do not share state ("separate object instances") `[D1.1]`
-- [ ] A read-only way to see a space's state and how many proposals exist, so tests can prove nothing changed `[Suggestion]`
-- [ ] Tests: changing a snapshot does not change the booking `[D1-F]`; two applications are independent `[D1.1]`
+- [x] Never return an internal collection that callers could change `[D1.1]`
+- [x] `bookingSnapshot()` returns a fresh map that keeps the `"spaceId"` and `"version"` keys `[Starter]`
+- [x] Two `StudentApplication` objects do not share state ("separate object instances") `[D1.1]`
+- [x] A read-only way to see a space's state and how many proposals exist, so tests can prove nothing changed `[Suggestion]`
+- [x] Tests: changing a snapshot does not change the booking `[D1-F]`; two applications are independent `[D1.1]`
 
-## Step 7: `propose(targetId)`
+## Step 7: `propose(targetId)` ✅
 
-- [ ] Retrieve B1, check policy v1, record booking version 0 and policy version 1 `[D1.3]`
-- [ ] Create and store a `PENDING` proposal with an id the application generates `[D1.3]`, which must match the identifier pattern `[Starter]`
-- [ ] The booking stays at A17, version 0. Never approve or execute `[D1.3]`
-- [ ] Reject D09 and unknown targets without changing anything `[D1.3]`, using `IllegalArgumentException` `[Starter]`
-- [ ] Also reject A17 (current space) and malformed ids `[Suggestion]`
-- [ ] Tests, each checking **every** protected field afterwards, not just that an exception was thrown `[D1.4]` (the rubric says exception-only tests are insufficient):
+- [x] Retrieve B1, check policy v1, record booking version 0 and policy version 1 `[D1.3]`
+- [x] Create and store a `PENDING` proposal with an id the application generates `[D1.3]`, which must match the identifier pattern `[Starter]`
+- [x] The booking stays at A17, version 0. Never approve or execute `[D1.3]`
+- [x] Reject D09 and unknown targets without changing anything `[D1.3]`, using `IllegalArgumentException` `[Starter]`
+- [x] Also reject A17 (current space) and malformed ids `[Suggestion]`
+- [x] Tests, each checking **every** protected field afterwards, not just that an exception was thrown `[D1.4]` (the rubric says exception-only tests are insufficient):
   - B12 gives a `PENDING` proposal for B1 → B12 with versions 0/1; booking still A17 / 0 `[D1-C]`
   - D09 rejected; booking, D09's occupancy and proposal count unchanged `[D1-D]`
   - unknown target rejected; no proposal stored; booking unchanged `[D1-E]`
 
 Done when: `bash run.sh check` prints `CHECKS 14; FAILED 0`.
 
-## Step 8: Demonstration command
+## Step 8: Demonstration command ✅
 
-- [ ] `bash run.sh run scripted` feeds the scripted target B12 and displays a structured result `[D1.3]`
-- [ ] The same command also shows D09 and an unknown target being rejected `[D1.3]`; today it only runs B12, so extend `Main` `[Starter]`
-- [ ] After each attempt, print the booking to show it is still A17 / version 0 `[Suggestion]`
-- [ ] Keep the "not a live model run" label `[Overview]`
+- [x] `bash run.sh run scripted` feeds the scripted target B12 and displays a structured result `[D1.3]`
+- [x] The same command also shows D09 and an unknown target being rejected `[D1.3]`; today it only runs B12, so extend `Main` `[Starter]`
+- [x] After each attempt, print the booking to show it is still A17 / version 0 `[Suggestion]`
+- [x] Keep the "not a live model run" label `[Overview]`
 
-## Step 9: Capture evidence
+## Step 9: Capture evidence ✅
 
-- [ ] Save genuine output with date, command and environment to `results/d1.txt` `[Overview]` `[D1.4]`
-- [ ] It must show how the assessor runs the D1-A–F cases `[D1.4]`
-- [ ] Don't label plain checks as JUnit, or replay as a live model `[Overview]`; don't hand-edit output `[Starter]`
+- [x] Save genuine output with date, command and environment to `results/d1.txt` `[Overview]` `[D1.4]`
+- [x] It must show how the assessor runs the D1-A–F cases `[D1.4]`
+- [x] Don't label plain checks as JUnit, or replay as a live model `[Overview]`; don't hand-edit output `[Starter]`
 
 One way to capture everything at once `[Suggestion]`:
 
@@ -134,10 +134,10 @@ One way to capture everything at once `[Suggestion]`:
 } > results/d1.txt 2>&1
 ```
 
-## Step 10: `TEST_PLAN.md`
+## Step 10: `TEST_PLAN.md` ✅
 
-- [ ] For each case D1-A to D1-F: preconditions, input, expected result, actual result, test method name `[Starter]`
-- [ ] For each rejection case, list the outcome **and** every field that stays unchanged `[Starter]`
+- [x] For each case D1-A to D1-F: preconditions, input, expected result, actual result, test method name `[Starter]`
+- [x] For each rejection case, list the outcome **and** every field that stays unchanged `[Starter]`
 
 ## Step 11: Diagrams (after the code stops changing)
 
@@ -166,12 +166,16 @@ Recorded as they are made, so DESIGN.pdf has material ready. Each one can serve 
 | Decision | Where | Alternative rejected | Why |
 |---|---|---|---|
 | Proposal status is an enum with exactly `PENDING`, `APPROVED`, `REJECTED`, `EXECUTED` | `ProposalStatus`, `Proposal.getStatus()` | Store the status as a `String` | The compiler only accepts the four real statuses, so a typo like `"PENDNG"` cannot compile, and a proposal can never hold a status the brief doesn't define. `Proposal.toView()` converts it with `status.name()` because `ProposalView` needs a `String`. |
+| A proposal's status is set to `PENDING` by its constructor, never passed in, and has no setter | `Proposal` constructor | Take the status as a constructor parameter or add `setStatus` | No caller can create an already-approved proposal; the brief says the model never supplies approval. D2 adds controlled transitions. |
+| The eligibility rule lives in its own class with its version number beside it | `EligibilityPolicy.isEligible`, `getVersion` | An `if` inside `StudentApplication.propose`, or a method on `Space` | One place to change for policy v2 in D3; `propose` records `getVersion()` in each proposal; D2's list-alternatives step can reuse `isEligible`. |
+| Callers get read-only copies: snapshot maps and `ProposalView` lists, never the domain objects or internal collections | `bookingSnapshot()`, `spaceSnapshot(String)`, `proposals()` | Return the `Booking`, `Space` and `List<Proposal>` directly | Callers cannot bypass validation or reorder/clear stored proposals (D1-F); once D2 makes occupancy change, the copies stay safe. |
+| `propose` reports a rejected target with `IllegalArgumentException` | `StudentApplication.propose` | A result object with distinct outcomes | Matches the starter's public checks for D1; D2 needs distinct outcomes (`STALE`, `UNAVAILABLE_OR_INELIGIBLE`, …) and will replace it. Good "current limitation" for DESIGN.pdf. |
 
 ## Step 13: README, CHANGELOG, AI_USE
 
-- [ ] `README.md`: JDK version, exact commands, supported scenarios, known limitations, starter files reused `[Overview]`
-- [ ] `README.md`: how your class and method names map to the brief's terms `[Starter]`
-- [ ] `CHANGELOG.md`: one line per completed step `[Starter]`
+- [x] `README.md`: JDK version, exact commands, supported scenarios, known limitations, starter files reused `[Overview]`
+- [x] `README.md`: how your class and method names map to the brief's terms `[Starter]`
+- [x] `CHANGELOG.md`: one line per completed step `[Starter]`
 - [ ] `AI_USE.md`: a row for each AI-assisted task with tool, date, task, files, what you changed or rejected, and how you checked it `[Overview]`
   - still missing: the `DomainRules` row
 
