@@ -40,3 +40,10 @@ Record D1 implementation, D1 feedback fixes, D2 additions and D3 changes here.
 - 2026-10-04: Updated `AI_USE.md` with the AI assistance used for D1.
 - 2026-10-04: Packaged the D1 submission as `EECS3311_D1_221524855.zip` and verified it from a
   fresh unzip (`check`, `run scripted`, `setup-junit.sh` + `test`).
+
+### D1 corrections
+- 2026-10-29: D1 correction: rebuilt `DESIGN.pdf` with `python3 design/build.py`. The copy
+  committed on 2026-10-04 and packaged in `EECS3311_D1_221524855.zip` was unreadable (blank
+  pages): it had been re-saved as UTF-8 text after Chrome printed it, which replaced every
+  non-ASCII byte. Content is unchanged; the regenerated `design/DESIGN.html` is identical to the
+  committed one.
