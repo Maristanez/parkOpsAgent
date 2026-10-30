@@ -52,7 +52,7 @@ public final class Proposal{
     }
 
     public void approve(){
-        if(status!= ProposalStatus.PENDING){
+        if(status != ProposalStatus.PENDING){
             throw new IllegalStateException("Only a PENDING proposal can be approved, status is: " + status);
         }
         status = ProposalStatus.APPROVED; // approve the proposal status 
