@@ -327,4 +327,10 @@ public class StudentTests {
         assertEquals(1, first.proposals().size());
         assertTrue(second.proposals().isEmpty());
     }
+
+    @Test approvePendingStatusRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.approve();
+        assertEquals(ProposalStatus.APPROVED, request.getStatus());
+    }
 }

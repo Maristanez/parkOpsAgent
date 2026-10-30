@@ -289,12 +289,11 @@ A model may pick C03 instead of B12. Both are allowed, so tests must accept eith
 
 **Why:** D2 extends D1, so start from a D1 that passes and is committed. Source: `[D2 intro]`.
 
-- [ ] 0.1 Run `bash run.sh check`; expect `CHECKS 14; FAILED 0`
-- [ ] 0.2 Run `bash run.sh test`; expect every test to pass
-- [ ] 0.3 Commit the current `CHANGELOG.md` and plan changes
-- [ ] 0.4 Check eClass for D1 feedback. List each defect below, fix it, and add a CHANGELOG line starting `D1 feedback:`
-- [ ] 0.5 Check eClass for an announced course model endpoint (this decides task 2.5.6)
-- [ ] 0.6 Add the missing `DomainRules` row to `AI_USE.md`
+- [x] 0.1 Run `bash run.sh check`; expect `CHECKS 14; FAILED 0`
+- [x] 0.2 Run `bash run.sh test`; expect every test to pass
+- [x] 0.3 Commit the current `CHANGELOG.md` and plan changes
+- [x] 0.4 Check eClass for D1 feedback. List each defect below, fix it, and add a CHANGELOG line starting `D1 feedback:`
+- [x] 0.5 Check eClass for an announced course model endpoint (this decides task 2.5.6)
 
 D1 feedback defects:
 
