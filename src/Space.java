@@ -1,7 +1,7 @@
 public final class Space{
     private final String id;
-    private final boolean open; 
-    private final boolean occupied;
+    private boolean open; 
+    private boolean occupied;
     private final boolean accessible;
 
     public Space(String id, boolean open, boolean occupied, boolean accessible){
@@ -31,6 +31,24 @@ public final class Space{
     // Available spot means that it must be open and not occupied 
     public boolean isAvailable(){
         return open && !occupied; 
+    }
+
+    // car takes space, refuses a space if taken
+    public void occupy(){
+        if(occupied){
+            throw new IllegalStateException("Space " + id + "is already occupied");
+        }
+        occupied = true; 
+    }
+
+    // car leave space
+    public void release(){
+        occupied = false;
+    }
+
+    // space stops taking cars
+    public void close(){
+        open = false; 
     }
 
 }

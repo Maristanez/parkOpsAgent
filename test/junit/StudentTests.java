@@ -441,6 +441,42 @@ public class StudentTests {
 
         assertThrows(IllegalArgumentException.class, () -> booking.movedTo("d18")); 
     }
+
+    @Test 
+    void occupyTakesUpFreeSpace(){
+        Space b12 = new Space("B12", true, false, false);
+        b12.occupy();
+        assertTrue(b12.isOccupied());
+        assertFalse(b12.isAvailable());
+
+    }
+
+    @Test
+    void cannotOccupyATakenSpace(){
+        Space b12 = new Space("B12", true, true, false);
+        assertThrows(IllegalStateException.class, () -> b12.occupy());
+        assertTrue(b12.isOccupied());
+        assertTrue(b12.isOpen());
+    }
+
+    @Test 
+    void releaseFreesSpace(){
+        Space b12 = new Space("B12", false, true, false);
+        b12.release();
+        assertFalse(b12.isOccupied());
+        assertFalse(b12.isAvailable());
+    }
+
+    @Test 
+    void closedSpaceNotAvailable(){
+        Space b12 = new Space("B12", true, true, false);
+        b12.close();
+        assertFalse(b12.isOpen());
+        assertFalse(b12.isAvailable());
+        assertTrue(b12.isOccupied()); // closing does not change any other attributes
+    }
+
+
   
 
 }

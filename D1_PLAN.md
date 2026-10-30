@@ -349,8 +349,8 @@ Two of these decisions become the "two design decisions" in DESIGN.pdf:
   - approve or reject an `EXECUTED` proposal → throws, still `EXECUTED`
   - `markExecuted()` on `PENDING` or `REJECTED` → throws, status unchanged
   - `markExecuted()` on `APPROVED` → `EXECUTED`
-- [ ] 2.2.5 `Booking.movedTo(spaceId)` returns a new booking on that space with version + 1. Test: new space and version + 1; the old booking is unchanged; an invalid space id is rejected
-- [ ] 2.2.6 `Space`: make only `open` and `occupied` non-final (same pattern as `Proposal.status`), changed only by `occupy()`, `release()` and `close()`. `id` and `accessible` stay `final`. Test: each method sets the right flag, and `isAvailable()` follows
+- [x] 2.2.5 `Booking.movedTo(spaceId)` returns a new booking on that space with version + 1. Test: new space and version + 1; the old booking is unchanged; an invalid space id is rejected
+- [x] 2.2.6 `Space`: make only `open` and `occupied` non-final (same pattern as `Proposal.status`), changed only by `occupy()`, `release()` and `close()`. `id` and `accessible` stay `final`. Test: each method sets the right flag, and `isAvailable()` follows
 - [ ] 2.2.7 `Booking.withDuration(hours)` returns a new booking with that duration and version + 1, checked through `DomainRules` (needed for D2-F). Test: 0 and 25 rejected; 4 gives version + 1 and the same space
 - [ ] 2.2.8 New enum `ExecutionOutcome`: `NOT_APPROVED`, `STALE`, `UNAVAILABLE_OR_INELIGIBLE`, `COMMITTED`, `DUPLICATE`
 
