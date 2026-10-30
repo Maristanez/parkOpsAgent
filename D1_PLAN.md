@@ -341,7 +341,7 @@ Two of these decisions become the "two design decisions" in DESIGN.pdf:
 ### Part A: let the domain objects change, safely
 
 - [x] 2.2.1 `Proposal.approve()`: allowed only when `PENDING`, otherwise throw `IllegalStateException`
-- [ ] 2.2.2 `Proposal.reject()`: allowed only when `PENDING`
+- [x] 2.2.2 `Proposal.reject()`: allowed only when `PENDING`
 - [ ] 2.2.3 `Proposal.markExecuted()`: allowed only when `APPROVED`
 - [ ] 2.2.4 Test: each allowed change works; each disallowed one throws and leaves the status as it was
 - [ ] 2.2.5 `Booking.movedTo(spaceId)` returns a new booking on that space with version + 1; the old object is unchanged

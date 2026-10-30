@@ -346,7 +346,7 @@ public class StudentTests {
     }
 
     @Test
-    void approveRejectStatusRequest(){
+    void rejectPendingStatusRequest(){
         Proposal request = new Proposal("D12","B5", "A10", 1, 1);
         request.reject();
         assertEquals(ProposalStatus.REJECTED, request.getStatus());
