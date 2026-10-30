@@ -340,7 +340,7 @@ Two of these decisions become the "two design decisions" in DESIGN.pdf:
 
 ### Part A: let the domain objects change, safely
 
-- [ ] 2.2.1 `Proposal.approve()`: allowed only when `PENDING`, otherwise throw `IllegalStateException`
+- [x] 2.2.1 `Proposal.approve()`: allowed only when `PENDING`, otherwise throw `IllegalStateException`
 - [ ] 2.2.2 `Proposal.reject()`: allowed only when `PENDING`
 - [ ] 2.2.3 `Proposal.markExecuted()`: allowed only when `APPROVED`
 - [ ] 2.2.4 Test: each allowed change works; each disallowed one throws and leaves the status as it was
