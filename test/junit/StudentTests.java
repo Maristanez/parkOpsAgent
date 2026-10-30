@@ -334,4 +334,12 @@ public class StudentTests {
         request.approve();
         assertEquals(ProposalStatus.APPROVED, request.getStatus());
     }
+
+    @Test 
+    void cannotApproveNonPendingRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.approve();
+        assertThrows(IllegalStateException.class, () -> request.approve());
+    }
+
 }
