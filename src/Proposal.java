@@ -62,7 +62,7 @@ public final class Proposal{
         if(status != ProposalStatus.PENDING){
             throw new IllegalStateException("Only a PENDING proposal can be approved, status is: " + status);
         }
-        status = ProposalStatus.APPROVED; // approve the proposal status 
+        status = ProposalStatus.REJECTED; // approve the proposal status 
     }
 
     // Converts to the starter's ProposalView, which stores the status as a String
