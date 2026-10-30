@@ -362,4 +362,27 @@ public class StudentTests {
         assertEquals(ProposalStatus.REJECTED, request.getStatus());
     }
 
+    @Test
+    void executeApprovedStatusRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.approve();
+        request.markExecuted();
+        assertEquals(ProposalStatus.EXECUTED, request.getStatus());
+    }
+
+    @Test
+    void cannotExcecutePendingRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        assertThrows(IllegalStateException.class, () -> request.markExecuted());
+    }
+
+    @Test
+    void cannotExcecuteRejectedRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.reject();
+        assertThrows(IllegalStateException.class, () -> request.markExecuted());
+    }
+
+
+
 }

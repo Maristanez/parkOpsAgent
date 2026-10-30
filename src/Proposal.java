@@ -65,6 +65,12 @@ public final class Proposal{
         status = ProposalStatus.REJECTED; // approve the proposal status 
     }
 
+    public void markExecuted(){
+        if(status != ProposalStatus.APPROVED){
+            throw new IllegalStateException("Only a APPROVED request can be marked EXECUTED, status is: " + status);
+        }
+        status = ProposalStatus.EXECUTED; // approve the proposal status 
+    }
     // Converts to the starter's ProposalView, which stores the status as a String
     public ProposalView toView(){
         return new ProposalView(proposalId, bookingId, targetId,
