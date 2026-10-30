@@ -47,6 +47,10 @@ public final class Booking{
         return requiresAccessible;
     }
 
+    public Booking movedTo(String newSpaceId){
+        return new Booking(id, newSpaceId, durationHours, version + 1, requiresAccessible);
+    }
+
     
 
 }

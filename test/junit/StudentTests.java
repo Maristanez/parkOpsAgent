@@ -427,6 +427,20 @@ public class StudentTests {
         assertEquals(ProposalStatus.EXECUTED, request.getStatus());
     }
 
+    @Test 
+    void validMovedBooking(){
+        Booking booking = new Booking("D12", "C5", 5, 1, true);
+        Booking newBooking = booking.movedTo("C14"); 
+        assertEquals("C14", newBooking.getSpaceId());
+        assertEquals(booking.getVersion() + 1, newBooking.getVersion());
+    }
 
+    @Test 
+    void invalidMovedBookingSpaceId(){
+        Booking booking = new Booking("D12", "C5", 5, 1, true);
+
+        assertThrows(IllegalArgumentException.class, () -> booking.movedTo("d18")); 
+    }
+  
 
 }
