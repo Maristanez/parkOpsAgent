@@ -374,6 +374,7 @@ public class StudentTests {
     void cannotExcecutePendingRequest(){
         Proposal request = new Proposal("D12","B5", "A10", 1, 1);
         assertThrows(IllegalStateException.class, () -> request.markExecuted());
+        assertEquals(ProposalStatus.PENDING, request.getStatus());
     }
 
     @Test
@@ -381,6 +382,7 @@ public class StudentTests {
         Proposal request = new Proposal("D12","B5", "A10", 1, 1);
         request.reject();
         assertThrows(IllegalStateException.class, () -> request.markExecuted());
+        assertEquals(ProposalStatus.REJECTED, request.getStatus());
     }
 
 

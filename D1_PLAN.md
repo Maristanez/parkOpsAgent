@@ -343,7 +343,7 @@ Two of these decisions become the "two design decisions" in DESIGN.pdf:
 
 - [x] 2.2.1 `Proposal.approve()`: allowed only when `PENDING`, otherwise throw `IllegalStateException`
 - [x] 2.2.2 `Proposal.reject()`: allowed only when `PENDING` (still to tidy: its comment says "approve the proposal status")
-- [ ] 2.2.3 `Proposal.markExecuted()`: allowed only when `APPROVED`; sets `EXECUTED`
+- [x] 2.2.3 `Proposal.markExecuted()`: allowed only when `APPROVED`; sets `EXECUTED`
 - [ ] 2.2.4 The remaining transition tests (needs 2.2.3). Each refused call throws **and** the status stays the same:
   - approve or reject a `REJECTED` proposal → throws, still `REJECTED`
   - approve or reject an `EXECUTED` proposal → throws, still `EXECUTED`
