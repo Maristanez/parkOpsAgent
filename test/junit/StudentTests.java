@@ -345,4 +345,21 @@ public class StudentTests {
         assertEquals(ProposalStatus.APPROVED, request.getStatus());
     }
 
+    @Test
+    void approveRejectStatusRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.reject();
+        assertEquals(ProposalStatus.REJECTED, request.getStatus());
+    }
+
+    @Test 
+    void cannotRejectNonPendingRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.reject();
+        assertThrows(IllegalStateException.class, () -> request.reject());
+
+        // ensure the status does not change, state should not change after rejection
+        assertEquals(ProposalStatus.REJECTED, request.getStatus());
+    }
+
 }
