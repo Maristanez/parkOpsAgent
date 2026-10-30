@@ -389,7 +389,7 @@ public class StudentTests {
     void cannotRejectApprovedRequest(){
         Proposal request = new Proposal("D12","B5", "A10", 1, 1);
         request.approve();
-        assertThrows(IllegalStateException.class, request.reject());
+        assertThrows(IllegalStateException.class, () -> request.reject());
         assertEquals(ProposalStatus.APPROVED, request.getStatus());
     }
 
