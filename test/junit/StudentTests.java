@@ -385,6 +385,48 @@ public class StudentTests {
         assertEquals(ProposalStatus.REJECTED, request.getStatus());
     }
 
+    @Test 
+    void cannotRejectApprovedRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.approve();
+        assertThrows(IllegalStateException.class, request.reject());
+        assertEquals(ProposalStatus.APPROVED, request.getStatus());
+    }
+
+    @Test 
+    void cannotApproveRejectedRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.reject();
+        assertThrows(IllegalStateException.class, () -> request.approve());
+        assertEquals(ProposalStatus.REJECTED, request.getStatus());
+    }
+
+    @Test
+    void cannotApproveExecutedRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.approve();
+        request.markExecuted();
+        assertThrows(IllegalStateException.class, () -> request.approve());
+        assertEquals(ProposalStatus.EXECUTED, request.getStatus());
+    }
+
+    @Test 
+    void cannotRejectExecutedRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.approve();
+        request.markExecuted();
+        assertThrows(IllegalStateException.class, () -> request.reject());
+        assertEquals(ProposalStatus.EXECUTED, request.getStatus());
+    }
+    @Test 
+    void cannotMarExecutedAnExecutedRequest(){
+        Proposal request = new Proposal("D12","B5", "A10", 1, 1);
+        request.approve();
+        request.markExecuted();
+        assertThrows(IllegalStateException.class, () -> request.markExecuted());
+        assertEquals(ProposalStatus.EXECUTED, request.getStatus());
+    }
+
 
 
 }
