@@ -297,7 +297,7 @@ A model may pick C03 instead of B12. Both are allowed, so tests must accept eith
 
 D1 feedback defects:
 
-- `DESIGN.pdf` in the D1 ZIP was unreadable (blank pages): after Chrome printed it on 4 Oct, something re-saved it as text, replacing every non-ASCII byte. Rebuilt on 29 Oct with `python3 design/build.py`; the content is unchanged (`design/DESIGN.html` is identical to commit `07f55c4`). Add a CHANGELOG line, and ask the instructor on eClass whether the rebuilt PDF can be assessed for D1
+- `DESIGN.pdf` in the D1 ZIP was unreadable (blank pages): after Chrome printed it on 4 Oct, something re-saved it as text, replacing every non-ASCII byte. Rebuilt on 29 Oct with `python3 design/build.py`; the content is unchanged (`design/DESIGN.html` is identical to commit `07f55c4`). CHANGELOG line added (commit `ee4a899`). Still to do: ask the instructor on eClass whether the rebuilt PDF can be assessed for D1
 - (no D1 feedback released yet)
 
 ---
@@ -324,6 +324,7 @@ Two of these decisions become the "two design decisions" in DESIGN.pdf:
 | Question | Options | Suggested | Your choice |
 |---|---|---|---|
 | How a commit changes `Booking` | A new copy with `movedTo`, or change it in place with `moveTo` | New copy; keeps D1's read-only booking | |
+| How a commit changes `Space` | Non-final `open`/`occupied` changed only by `occupy`/`release`/`close`, or a new copy each time | Non-final with methods; a space has no version to bump, so a copy adds code for nothing. Explain why it differs from `Booking` | |
 | How `execute` reports a result | Return an `ExecutionOutcome` enum, or throw one exception per failure | Enum; the brief wants named outcomes | |
 | How the parser reports bad input | Return a result value, or throw | Result value; the loop has to count it and keep going | |
 | Where data lives | A `ParkingStore` class, or fields in `StudentApplication` | `ParkingStore`; D2.4 asks for separate storage | |
@@ -341,24 +342,29 @@ Two of these decisions become the "two design decisions" in DESIGN.pdf:
 ### Part A: let the domain objects change, safely
 
 - [x] 2.2.1 `Proposal.approve()`: allowed only when `PENDING`, otherwise throw `IllegalStateException`
-- [x] 2.2.2 `Proposal.reject()`: allowed only when `PENDING`
-- [ ] 2.2.3 `Proposal.markExecuted()`: allowed only when `APPROVED`
-- [ ] 2.2.4 Test: each allowed change works; each disallowed one throws and leaves the status as it was
-- [ ] 2.2.5 `Booking.movedTo(spaceId)` returns a new booking on that space with version + 1; the old object is unchanged
-- [ ] 2.2.6 `Space` gains `occupy()`, `release()` and `close()`, needed for a commit and to set up D2-G
-- [ ] 2.2.7 A way to raise B1's version without moving it, for D2-F, e.g. `changeDuration(hours)`
+- [x] 2.2.2 `Proposal.reject()`: allowed only when `PENDING` (still to tidy: its comment says "approve the proposal status")
+- [ ] 2.2.3 `Proposal.markExecuted()`: allowed only when `APPROVED`; sets `EXECUTED`
+- [ ] 2.2.4 The remaining transition tests (needs 2.2.3). Each refused call throws **and** the status stays the same:
+  - approve or reject a `REJECTED` proposal → throws, still `REJECTED`
+  - approve or reject an `EXECUTED` proposal → throws, still `EXECUTED`
+  - `markExecuted()` on `PENDING` or `REJECTED` → throws, status unchanged
+  - `markExecuted()` on `APPROVED` → `EXECUTED`
+- [ ] 2.2.5 `Booking.movedTo(spaceId)` returns a new booking on that space with version + 1. Test: new space and version + 1; the old booking is unchanged; an invalid space id is rejected
+- [ ] 2.2.6 `Space`: make only `open` and `occupied` non-final (same pattern as `Proposal.status`), changed only by `occupy()`, `release()` and `close()`. `id` and `accessible` stay `final`. Test: each method sets the right flag, and `isAvailable()` follows
+- [ ] 2.2.7 `Booking.withDuration(hours)` returns a new booking with that duration and version + 1, checked through `DomainRules` (needed for D2-F). Test: 0 and 25 rejected; 4 gives version + 1 and the same space
 - [ ] 2.2.8 New enum `ExecutionOutcome`: `NOT_APPROVED`, `STALE`, `UNAVAILABLE_OR_INELIGIBLE`, `COMMITTED`, `DUPLICATE`
 
 ### Part B: store the data and make it visible to tests
 
-- [ ] 2.2.9 Move the booking, spaces and proposals into `ParkingStore`; add a commit list and a notification list
+- [ ] 2.2.9 Move the booking, spaces and proposals into `ParkingStore`; add a commit list and a notification list. Because `Booking` is read-only, the store needs one method that swaps in the new booking (e.g. `replaceBooking`). The D1 methods (`bookingSnapshot`, `spaceSnapshot`, `proposals`, `propose`) now read from the store
 - [ ] 2.2.10 Read-only `commitCount()` and `notifications()` on `StudentApplication`
-- [ ] 2.2.11 Test helper `protectedState()` that returns everything in the "nothing changed" list as one value
+- [ ] 2.2.11 Test helper `protectedState(app)` in `StudentTests` (test code, not `src/`) that builds everything in the "nothing changed" list from the public snapshots into one value
 - [ ] 2.2.12 Run `bash run.sh check` again; D1 must still pass
 
 ### Part C: the operator actions
 
 - [ ] 2.2.13 `approve(proposalId)` and `reject(proposalId)` on `StudentApplication`; an unknown id gives a clear error
+- [ ] 2.2.13b The changes D2-F and D2-G need to set up, as `StudentApplication` methods (tests can't reach the private objects): `changeBookingDuration(hours)` (uses `withDuration`, so B1's version goes up), `closeSpace(spaceId)` and `occupySpace(spaceId)`. Test each one
 - [ ] 2.2.14 `execute(proposalId)` runs these checks in this order and stops at the first one that fails:
 
 | # | Check | If it fails |
@@ -366,11 +372,11 @@ Two of these decisions become the "two design decisions" in DESIGN.pdf:
 | 1 | The proposal exists and is for B1 | Clear error |
 | 2 | Is it already `EXECUTED`? | `DUPLICATE`, change nothing |
 | 3 | Is it anything other than `APPROVED`? | `NOT_APPROVED` |
-| 4 | Has B1's version or the policy version changed since the proposal? | `STALE` |
+| 4 | Has B1's version or the policy version changed since the proposal? (Policy stays 1 in D2, so only the booking half is testable until D3) | `STALE` |
 | 5 | Is the target not eligible right now? | `UNAVAILABLE_OR_INELIGIBLE` |
 | 6 | All passed | Commit, return `COMMITTED` |
 
-- [ ] 2.2.15 A commit does exactly this: free A17, occupy the target, move B1 (version + 1), mark the proposal `EXECUTED`, add one commit record, add one notification record
+- [ ] 2.2.15 A commit does exactly this: free B1's old space (A17 in the fixture), occupy the target, move B1 (version + 1), mark the proposal `EXECUTED`, add one commit record, add one notification record
 - [ ] 2.2.16 Nothing inside `execute` calls the model or anything outside the program
 
 ### Part D: one test per case
@@ -404,7 +410,7 @@ The four tools:
 
 - [ ] 2.1.1 `Tool` enum with the four tool names
 - [ ] 2.1.2 `ToolRequest` record: `tool`, `bookingId`, `targetId`
-- [ ] 2.1.3 `ToolRequestParser.parse(text)` returns either a request or a rejection reason. It rejects:
+- [ ] 2.1.3 `ToolRequestParser.parse(text, goalBookingId, knownSpaceIds)` returns either a request or a rejection reason. The application passes in `"B1"` and the space ids, so the parser never touches the store. It rejects:
   - text that isn't valid JSON (the supplied `MiniJson` already catches this)
   - anything other than exactly the keys `tool`, `bookingId`, `targetId` (this is what rejects `"approved":true`)
   - a value that isn't a string
@@ -418,10 +424,10 @@ The four tools:
 - [ ] 2.1.5 `run` rejects a limit outside 1..6
 - [ ] 2.1.6 The conversation starts with a system message giving the goal and the JSON format
 - [ ] 2.1.7 Each turn: call the provider (one try) → save the reply as an `assistant` message → parse it → run the tool or note the rejection → save the result as a `user` message
-- [ ] 2.1.8 A rejected reply is counted as invalid, and the loop keeps going while tries remain
-- [ ] 2.1.9 Enforce the "must come after" column; a call out of order gets an error message back, not a crash
+- [ ] 2.1.8 A reply the parser rejects is counted as **invalid**; its reason goes back as the observation, and the loop keeps going while tries remain
+- [ ] 2.1.9 A valid request that fails a tool rule (out of order, stale versions, ineligible target such as D09) is a **tool error**: its reason goes back as the observation. It still used a try, but it is not an invalid reply. Never a crash
 - [ ] 2.1.10 List and propose check that B1's version and the policy version haven't changed since the read
-- [ ] 2.1.11 Propose reuses D1's `propose` logic
+- [ ] 2.1.11 Propose reuses D1's `propose` logic. D1's `propose` throws `IllegalArgumentException` for a bad target, so catch it and return it as a tool error (2.1.9)
 - [ ] 2.1.12 The provider throws (including a timeout) → `PROVIDER_ERROR`
 - [ ] 2.1.13 `run` returns a result record: outcome, calls made, invalid count, proposal id, transcript
 
@@ -450,7 +456,7 @@ The four tools:
 - [ ] 2.3.4 A scan finds bookings on closed spaces
 - [ ] 2.3.5 Remember each (booking, booking version, policy version) already emitted, and don't emit it again
 - [ ] 2.3.6 Also emit nothing while a `PENDING` or `APPROVED` proposal exists for that booking and versions
-- [ ] 2.3.7 After a failed attempt, emit again only if the operator calls `retry(bookingId)` or a version changes
+- [ ] 2.3.7 `retry(bookingId)` (operator action) forgets the remembered pair for that booking, so the next scan may emit it again. That's all a retry needs: because of 2.3.5, a failed attempt is never re-emitted on its own, and a version change makes a new pair anyway
 - [ ] 2.3.8 Test D2-L: ticks 0, 59, 60 → 1 item, then 0, then 0
 - [ ] 2.3.9 Test D2-M: tick 60 then tick 30 → rejected; tick 120 afterwards still works
 - [ ] 2.3.10 Tests: a pending proposal → no item; after a commit → no item; `retry` → one new item at the next scan
@@ -490,7 +496,7 @@ The four tools:
 - [ ] 2.4.4 Class diagram: the new classes, with the four kinds of code visible
 - [ ] 2.4.5 Sequence diagram: loop → pending proposal → approval boundary → approve → execute with re-checks → commit
 - [ ] 2.4.6 New proposal-state diagram: `PENDING → APPROVED → EXECUTED` and `PENDING → REJECTED`; executing again gives `DUPLICATE` with no state change
-- [ ] 2.4.7 Re-run `python3 design/build.py`
+- [ ] 2.4.7 Update `design/build.py` for D2: the title and text are D1's, and the third diagram has to be drawn in its SVG code. The D2 DESIGN.pdf replaces the D1 one. Budget most of a day; then re-run it and open the PDF to check every page
 - [ ] 2.4.8 DESIGN.pdf, at most 5 pages plus diagrams, contains:
   - [ ] which class does what, and what depends on what
   - [ ] a state transition table (state × approve/reject/execute → result)
