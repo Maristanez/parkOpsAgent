@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Builds DESIGN.pdf: the D1 design explanation plus UML class and sequence diagrams.
+"""Builds DESIGN.pdf: the D2 design explanation plus two UML class diagrams, two sequence
+diagrams and the proposal-state diagram.
 
 Usage, from the project root:  python3 design/build.py
 Writes design/DESIGN.html and DESIGN.pdf. The PDF step needs Google Chrome
 (set CHROME to its executable if it is not in the default macOS location).
 When the code changes, update the diagram data below so the figures still match it.
+The D1 version of this script is in the git history (commit 07f55c4).
 """
 import html
 import os
@@ -126,167 +128,289 @@ def link(p, a, b, kind, name=None, at=0.5, dx=0, dy=-4, ends=()):
     return "\n".join(out)
 
 
-def class_diagram():
-    p = "c-"
-    fixture = Box(20, 30, "Fixture", starter=True, statics="all", ops=[
-        "+ booking(): Map<String,Object>",
-        "+ spaces(): List<Map<String,Object>>",
-        "+ proposalRequest(String): String"])
-    main = Box(300, 30, "Main", statics="all", ops=["+ main(String[]): void"])
-    replay = Box(520, 30, "ReplayProvider", starter=True,
-                 attrs=["- responses: List<String>"],
-                 ops=["+ ReplayProvider(List<String>)", "+ next(List<ChatMessage>): String"])
-    model = Box(775, 30, "ModelProvider", stereo="«interface»", starter=True,
-                ops=["+ next(List<ChatMessage>): String"])
-    policy = Box(20, 150, "EligibilityPolicy", statics=["- VERSION: int = 1"],
-                 attrs=["- VERSION: int = 1"],
-                 ops=["+ getVersion(): int", "+ isEligible(Booking, Space): boolean"])
-    rules = Box(20, 250, "DomainRules", stereo="«utility»",
-                attrs=["- MIN_HOURS: int = 1", "- MAX_HOURS: int = 24", "- ID_PATTERN: Pattern"],
-                ops=["- DomainRules()", "+ requireDuration(int): void", "+ requireIdentifier(String): void"],
-                statics=["- MIN_HOURS: int = 1", "- MAX_HOURS: int = 24", "- ID_PATTERN: Pattern",
-                         "+ requireDuration(int): void", "+ requireIdentifier(String): void"])
-    app = Box(330, 150, "StudentApplication",
+def poly(p, pts, kind, ends=(), name=None, name_at=None):
+    """A link drawn through waypoints; same kinds and end labels as link()."""
+    d = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    parts = [f'<path d="{d}" fill="none" stroke="#222"']
+    if kind in ("dep", "real"):
+        parts.append('stroke-dasharray="5,3"')
+    if kind == "comp":
+        parts.append(f'marker-start="url(#{p}diamond)"')
+    parts.append(f'marker-end="url(#{p}{"tri" if kind == "real" else "open"})"')
+    out = [" ".join(parts) + "/>"]
+    x2, y2 = pts[-1]
+    for s, ex, ey in ends:
+        out.append(label(x2 + ex, y2 + ey, s, anchor="start"))
+    if name:
+        out.append(label(name_at[0], name_at[1], name))
+    return "\n".join(out)
+
+
+def region(x, y, w, h, title):
+    """A light dashed frame naming one of the four kinds of code D2.4 separates."""
+    return (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#fafafa" stroke="#999" stroke-dasharray="6,4"/>'
+            + text(x + 8, y + 14, title, size=10.5, bold=True, italic=True))
+
+
+# ---------------------------------------------------------------- class diagrams
+
+def class_diagram_core():
+    """Figure 1: coordination, storage and domain rules."""
+    p = "c1-"
+    app = Box(345, 30, "StudentApplication",
               attrs=["- nextProposalNumber: int"],
-              ops=["+ StudentApplication()",
+              ops=["+ propose(String): ProposalView",
+                   "+ run(ModelProvider, int): AgentResult",
+                   "+ approve(String): ProposalView",
+                   "+ reject(String): ProposalView",
+                   "+ execute(String): ExecutionOutcome",
+                   "+ tick(long): List<WorkItem>",
+                   "+ retry(String): void",
+                   "+ changeBookingDuration(int): void",
+                   "+ closeSpace(String): void",
+                   "+ occupySpace(String): void",
                    "+ bookingSnapshot(): Map<String,Object>",
                    "+ spaceSnapshot(String): Map<String,Object>",
                    "+ proposals(): List<ProposalView>",
-                   "+ propose(String): ProposalView",
-                   "+ run(ModelProvider, int): String",
-                   "- nextProposalId(): String",
-                   "- bookingFrom(Map<String,Object>): Booking",
-                   "- spaceFrom(Map<String,Object>): Space"],
-              statics=["- bookingFrom(Map<String,Object>): Booking", "- spaceFrom(Map<String,Object>): Space"])
-    view = Box(830, 150, "ProposalView", stereo="«record»", starter=True,
-               attrs=["proposalId: String", "bookingId: String", "targetId: String",
-                      "bookingVersion: int", "policyVersion: int", "status: String"])
-    status = Box(830, 305, "ProposalStatus", stereo="«enumeration»",
-                 literals=["PENDING", "APPROVED", "REJECTED", "EXECUTED"])
-    booking = Box(20, 420, "Booking",
+                   "+ commitCount(): int",
+                   "+ notifications(): List<Notification>",
+                   "+ policyVersion(): int",
+                   "+ alternatives(): List<String>",
+                   "+ spaceIds(): Set<String>",
+                   "- commit(Proposal, Booking, Space): void"])
+    checker = Box(20, 30, "PeriodicChecker",
+                  attrs=["- PERIOD_SECONDS: long = 60", "- lastTick: Long", "- nextScan: Long", "- emitted: Set<String>"],
+                  ops=["~ tick(long): List<WorkItem>", "~ retry(String): void", "- scan(long): List<WorkItem>",
+                       "- hasActiveProposal(Booking): boolean"],
+                  statics=["- PERIOD_SECONDS: long = 60"])
+    work = Box(20, 210, "WorkItem", stereo="«record»",
+               attrs=["bookingId: String", "bookingVersion: int", "policyVersion: int", "detectedAt: long"])
+    policy = Box(20, 345, "EligibilityPolicy", attrs=["- VERSION: int = 1"],
+                 ops=["+ getVersion(): int", "+ isEligible(Booking, Space): boolean"], statics=["- VERSION: int = 1"])
+    outcome = Box(660, 30, "ExecutionOutcome", stereo="«enumeration»",
+                  literals=["NOT_APPROVED", "STALE", "UNAVAILABLE_OR_INELIGIBLE", "COMMITTED", "DUPLICATE"])
+    view = Box(848, 30, "ProposalView", stereo="«record»", starter=True,
+               attrs=["proposalId: String", "bookingId: String", "targetId: String", "bookingVersion: int",
+                      "policyVersion: int", "status: String"])
+    commit = Box(660, 195, "CommitRecord", stereo="«record»",
+                 attrs=["proposalId: String", "bookingId: String", "fromSpaceId: String", "toSpaceId: String",
+                        "newBookingVersion: int"])
+    note = Box(848, 208, "Notification", stereo="«record»", attrs=["bookingId: String", "message: String"])
+    store = Box(700, 352, "ParkingStore",
+                attrs=["- booking: Booking"],
+                ops=["~ booking(): Booking", "~ replaceBooking(Booking): void", "~ space(String): Space",
+                     "~ proposal(String): Proposal", "~ addProposal(Proposal): void",
+                     "~ recordCommit(CommitRecord): void", "~ addNotification(Notification): void",
+                     "~ commitCount(): int", "~ notifications(): List<Notification>"])
+    rules = Box(345, 395, "DomainRules", stereo="«utility»",
+                ops=["+ requireDuration(int): void", "+ requireIdentifier(String): void"], statics="all")
+    booking = Box(20, 576, "Booking",
                   attrs=["- id: String", "- spaceId: String", "- durationHours: int", "- version: int",
                          "- requiresAccessible: boolean"],
-                  ops=["+ Booking(String, String, int, int, boolean)", "+ getId(): String",
-                       "+ getSpaceId(): String", "+ getDurationHours(): int", "+ getVersion(): int",
-                       "+ requiresAccessible(): boolean"])
-    space = Box(320, 420, "Space",
+                  ops=["+ Booking(String, String, int, int, boolean)", "+ movedTo(String): Booking",
+                       "+ withDuration(int): Booking"])
+    space = Box(318, 576, "Space",
                 attrs=["- id: String", "- open: boolean", "- occupied: boolean", "- accessible: boolean"],
-                ops=["+ Space(String, boolean, boolean, boolean)", "+ getId(): String", "+ isOpen(): boolean",
-                     "+ isOccupied(): boolean", "+ isAccessible(): boolean", "+ isAvailable(): boolean"])
-    proposal = Box(610, 420, "Proposal",
+                ops=["+ isAvailable(): boolean", "+ occupy(): void", "+ release(): void", "+ close(): void"])
+    proposal = Box(565, 576, "Proposal",
                    attrs=["- proposalId: String", "- bookingId: String", "- targetId: String",
                           "- observedBookingVersion: int", "- observedPolicyVersion: int"],
-                   ops=["+ Proposal(String, String, String, int, int)", "+ getProposalId(): String",
-                        "+ getBookingId(): String", "+ getTargetId(): String",
-                        "+ getObservedBookingVersion(): int", "+ getObservedPolicyVersion(): int",
-                        "+ getStatus(): ProposalStatus", "+ toView(): ProposalView"])
-    boxes = [fixture, main, replay, model, policy, rules, app, view, status, booking, space, proposal]
+                   ops=["+ approve(): void", "+ reject(): void", "+ markExecuted(): void", "+ toView(): ProposalView"])
+    status = Box(868, 576, "ProposalStatus", stereo="«enumeration»",
+                 literals=["PENDING", "APPROVED", "REJECTED", "EXECUTED"])
+    boxes = [app, checker, work, policy, outcome, view, commit, note, store, rules, booking, space, proposal, status]
 
+    regions = [
+        region(10, 6, 640, 340, "Coordination"),
+        region(655, 6, 337, 162, "Results returned to callers"),
+        region(655, 172, 337, 365, "Data storage"),
+        region(10, 352, 640, 185, "Domain rules: policy and validation"),
+        region(10, 552, 982, 198, "Domain rules: entities and statuses"),
+    ]
     links = [
-        # StudentApplication owns its state
-        link(p, app.pt("left", 0.25), policy.pt("right", 0.55), "comp", ends=[("-policy", 6, -6), ("1", 6, 14)]),
-        link(p, app.pt("bottom", 0.15), booking.pt("top", 0.6), "comp", ends=[("-booking", -60, -6), ("1", 10, -6)]),
-        link(p, app.pt("bottom", 0.45), space.pt("top", 0.5), "comp", ends=[("-spaces", 6, -40), ("1..*", 6, -8)]),
-        link(p, app.pt("bottom", 0.85), proposal.pt("top", 0.25), "comp", ends=[("-proposals", 8, -40), ("0..*", 8, -8)]),
-        link(p, proposal.pt("top", 0.9), status.pt("bottom", 0.3), "assoc", ends=[("-status", -46, 14), ("1", 6, 14)]),
-        # dependencies
-        link(p, app.pt("right", 0.35), view.pt("left", 0.45), "dep", "«use»", at=0.5),
-        link(p, proposal.pt("top", 0.55), view.pt("left", 0.85), "dep", "«create»", at=0.55, dx=-26),
-        link(p, app.pt("right", 0.1), model.pt("bottom", 0.4), "dep", "«use»", at=0.55),
-        link(p, replay.pt("right", 0.35), model.pt("left", 0.5), "real"),
-        link(p, main.pt("right", 0.5), replay.pt("left", 0.33), "dep", "«use»", at=0.5),
-        link(p, main.pt("left", 0.5), fixture.pt("right", 0.33), "dep"),
-        link(p, main.pt("bottom", 0.5), app.pt("top", 0.2), "dep", "«create»", at=0.45, dx=34),
-        link(p, app.pt("top", 0.05), fixture.pt("bottom", 0.7), "dep", "«use»", at=0.5),
-        link(p, app.pt("left", 0.8), rules.pt("right", 0.3), "dep", "«use»", at=0.5),
-        link(p, booking.pt("top", 0.25), rules.pt("bottom", 0.3), "dep"),
-        link(p, space.pt("top", 0.1), rules.pt("bottom", 0.85), "dep"),
-        link(p, proposal.pt("top", 0.05), rules.pt("right", 0.75), "dep"),
+        link(p, app.pt("left", 0.12), checker.pt("right", 0.45), "comp", ends=[("-checker", 6, -6), ("1", 6, 14)]),
+        link(p, app.pt("left", 0.9), policy.pt("right", 0.35), "comp", ends=[("-policy", 6, -6), ("1", 6, 14)]),
+        link(p, app.pt("right", 0.93), store.pt("left", 0.18), "comp", ends=[("-store", -52, -8), ("1", -14, 16)]),
+        poly(p, [checker.pt("right", 0.92), (318, checker.pt("right", 0.92)[1]), (318, 392), (store.x, 392)], "assoc",
+             ends=[("-store", -46, -6)]),
+        link(p, checker.pt("bottom", 0.88), policy.pt("top", 0.88), "assoc", ends=[("-policy", 4, -24)]),
+        link(p, checker.pt("bottom", 0.3), work.pt("top", 0.45), "dep", "«create»", at=0.5, dx=26),
+        link(p, store.pt("top", 0.15), commit.pt("bottom", 0.4), "comp", ends=[("0..*", 4, 14)]),
+        link(p, store.pt("top", 0.85), note.pt("bottom", 0.5), "comp", ends=[("0..*", 4, 14)]),
+        link(p, store.pt("bottom", 0.08), booking.pt("top", 0.85), "comp", ends=[("-booking 1", 6, -8)]),
+        link(p, store.pt("bottom", 0.3), space.pt("top", 0.75), "comp", ends=[("-spaces 1..*", 6, -8)]),
+        link(p, store.pt("bottom", 0.55), proposal.pt("top", 0.7), "comp", ends=[("-proposals 0..*", 6, -8)]),
+        link(p, proposal.pt("right", 0.25), status.pt("left", 0.4), "assoc", ends=[("-status 1", -62, -6)]),
+        link(p, app.pt("right", 0.2), outcome.pt("left", 0.6), "dep", "«create»", at=0.45),
+        link(p, policy.pt("bottom", 0.3), booking.pt("top", 0.25), "dep", "«use»", at=0.5),
+        link(p, policy.pt("bottom", 0.7), space.pt("top", 0.15), "dep", "«use»", at=0.6),
+        link(p, booking.pt("top", 0.6), rules.pt("left", 0.6), "dep"),
+        link(p, space.pt("top", 0.4), rules.pt("bottom", 0.4), "dep"),
+        link(p, proposal.pt("top", 0.2), rules.pt("right", 0.7), "dep"),
     ]
     legend = [
-        text(20, 664, "Grey header: supplied starter class, unchanged.  White header: written or completed for D1.", size=10),
-        text(20, 680, "Underlined members are static.  Filled diamond: composition (StudentApplication owns the part).  "
-                      "Solid line, open arrow: navigable association.", size=10),
-        text(20, 696, "Dashed line, open arrow: dependency.  Dashed line, hollow triangle: realization of an interface.  "
-                      "Booking, Space, Proposal and StudentApplication validate through DomainRules.", size=10),
+        text(20, 768, "Grey header: supplied starter class.  Underlined: static.  + public, - private, ~ package-private.  "
+                      "Simple getters are omitted.  Filled diamond: composition.", size=10),
+        text(20, 784, "Solid line, open arrow: association.  Dashed line: dependency.  StudentApplication and "
+                      "PeriodicChecker share one ParkingStore and one EligibilityPolicy.", size=10),
+        text(20, 800, "Proposal.toView() creates the ProposalView records StudentApplication returns.  Domain classes "
+                      "import nothing from coordination, storage or the model protocol.", size=10),
     ]
-    body = "\n".join([defs(p)] + links + [b.svg() for b in boxes] + legend)
-    return f'<svg viewBox="0 0 1000 710" xmlns="http://www.w3.org/2000/svg">{body}</svg>'
+    body = "\n".join([defs(p)] + regions + links + [b.svg() for b in boxes] + legend)
+    return f'<svg viewBox="0 0 1000 810" xmlns="http://www.w3.org/2000/svg">{body}</svg>'
 
 
-# ------------------------------------------------------------- sequence diagram
+def class_diagram_agent():
+    """Figure 2: the model/tool loop, the protocol classes and the provider boundary."""
+    p = "c2-"
+    main = Box(20, 30, "Main", statics="all",
+               ops=["+ main(String[]): void", "- scriptedD2(): void", "- scriptedD1(): void", "- live(): void"])
+    app = Box(280, 30, "StudentApplication",
+              ops=["+ run(ModelProvider, int): AgentResult", "+ bookingSnapshot(): Map<String,Object>",
+                   "+ alternatives(): List<String>", "+ propose(String): ProposalView", "+ policyVersion(): int",
+                   "+ spaceIds(): Set<String>", "(operator actions: Figure 1)"])
+    runner = Box(280, 245, "AgentRunner",
+                 attrs=["- MAX_CALLS: int = 6", "- limit: int", "- calls: int", "- invalidResponses: int",
+                        "- hasRead: boolean", "- hasListed: boolean", "- readBookingVersion: int",
+                        "- readPolicyVersion: int"],
+                 ops=["~ AgentRunner(StudentApplication, ModelProvider, int)", "~ run(): AgentResult",
+                      "- isStale(): boolean", "- activeProposalId(): String",
+                      "- observe(Map<String,Object>): void"],
+                 statics=["- MAX_CALLS: int = 6"])
+    result = Box(20, 245, "AgentResult", stereo="«record»",
+                 attrs=["outcome: AgentOutcome", "calls: int", "invalidResponses: int", "proposalId: String",
+                        "transcript: List<ChatMessage>"])
+    aoutcome = Box(20, 410, "AgentOutcome", stereo="«enumeration»",
+                   literals=["AWAITING_APPROVAL", "NO_ACTION", "STEP_LIMIT", "PROVIDER_ERROR"])
+    model = Box(745, 245, "ModelProvider", stereo="«interface»", starter=True,
+                ops=["+ next(List<ChatMessage>): String"])
+    replay = Box(745, 80, "ReplayProvider", starter=True,
+                 attrs=["- responses: List<String>"], ops=["+ next(List<ChatMessage>): String"])
+    ollama = Box(745, 345, "OllamaProvider", starter=True,
+                 attrs=["- endpoint: URI", "- model: String", "- timeout: Duration"],
+                 ops=["+ next(List<ChatMessage>): String"])
+    chat = Box(800, 505, "ChatMessage", stereo="«record»", starter=True, attrs=["role: String", "content: String"])
+    parser = Box(280, 520, "ToolRequestParser",
+                 attrs=["- PROPERTIES: List<String>"],
+                 ops=["+ parse(String, String, Set<String>): Result", "- toolNamed(String): Tool"], statics="all")
+    res = Box(20, 560, "ToolRequestParser.Result", stereo="«record»",
+              attrs=["request: ToolRequest", "rejection: String"], ops=["+ accepted(): boolean"])
+    req = Box(20, 668, "ToolRequest", stereo="«record»", attrs=["tool: Tool", "bookingId: String", "targetId: String"])
+    tool = Box(280, 640, "Tool", stereo="«enumeration»",
+               literals=["READ_BOOKING", "LIST_ALTERNATIVES", "PROPOSE_REASSIGNMENT", "FINISH"])
+    mini = Box(600, 620, "MiniJson", starter=True, statics="all",
+               ops=["+ parse(String): Object", "+ object(Object): Map<String,Object>", "+ stringify(Object): String"])
+    boxes = [main, app, runner, result, aoutcome, model, replay, ollama, chat, parser, res, req, tool, mini]
 
-def sequence_diagram():
-    p = "s-"
-    lanes = [("main", [":Main"], 50), ("replay", [":ReplayProvider"], 180),
-             ("app", ["app:StudentApplication"], 312), ("rules", ["«utility»", "DomainRules"], 432),
-             ("policy", [":EligibilityPolicy"], 560), ("b1", ["b1:Booking"], 680),
-             ("b12", ["b12:Space"], 795), ("p1", ["p1:Proposal"], 922)]
+    regions = [
+        region(10, 6, 718, 500, "Coordination"),
+        region(735, 56, 257, 520, "Provider boundary (starter)"),
+        region(10, 512, 718, 268, "Model protocol"),
+    ]
+    links = [
+        link(p, main.pt("right", 0.4), app.pt("left", 0.2), "dep", "«create»", at=0.5),
+        poly(p, [main.pt("top", 0.7), (main.pt("top", 0.7)[0], 18), (replay.pt("top", 0.9)[0], 18), replay.pt("top", 0.9)],
+             "dep", name="«create»", name_at=(640, 22)),
+        link(p, main.pt("bottom", 0.4), result.pt("top", 0.4), "dep", "«use»", at=0.5),
+        link(p, app.pt("bottom", 0.3), runner.pt("top", 0.3), "dep", "«create»", at=0.5, dx=-30),
+        link(p, runner.pt("top", 0.7), app.pt("bottom", 0.7), "assoc", ends=[("-app 1", 6, 16)]),
+        link(p, runner.pt("right", 0.3), model.pt("left", 0.5), "assoc", ends=[("-provider 1", -78, -8)]),
+        link(p, replay.pt("bottom", 0.5), model.pt("top", 0.5), "real"),
+        link(p, ollama.pt("top", 0.5), model.pt("bottom", 0.5), "real"),
+        link(p, runner.pt("right", 0.8), chat.pt("left", 0.35), "assoc", ends=[("-history 0..*", -98, -10)]),
+        link(p, runner.pt("left", 0.25), result.pt("right", 0.4), "dep", "«create»", at=0.5),
+        link(p, result.pt("bottom", 0.3), aoutcome.pt("top", 0.3), "assoc", ends=[("1", 6, -6)]),
+        link(p, runner.pt("bottom", 0.4), parser.pt("top", 0.4), "dep", "«use»", at=0.5),
+        link(p, parser.pt("left", 0.5), res.pt("right", 0.3), "dep", "«create»", at=0.5),
+        link(p, res.pt("bottom", 0.5), req.pt("top", 0.5), "assoc", ends=[("0..1", 6, -6)]),
+        link(p, req.pt("right", 0.4), tool.pt("left", 0.5), "assoc", ends=[("1", -14, -6)]),
+        link(p, parser.pt("right", 0.6), mini.pt("left", 0.3), "dep", "«use»", at=0.5),
+    ]
+    legend = [
+        text(20, 796, "AgentRunner reaches the domain only through StudentApplication's public methods, so the model "
+                      "can never approve, execute or skip a check.", size=10),
+        text(20, 828, "Main creates the ReplayProvider in scripted mode and the OllamaProvider in live mode "
+                      "(only the first dependency is drawn).", size=10),
+        text(20, 812, "Grey header: supplied starter class.  Dashed line, hollow triangle: realization.  Dashed line, "
+                      "open arrow: dependency.  Solid line: association.", size=10),
+    ]
+    body = "\n".join([defs(p)] + regions + links + [b.svg() for b in boxes] + legend)
+    return f'<svg viewBox="0 0 1000 836" xmlns="http://www.w3.org/2000/svg">{body}</svg>'
+
+
+# ------------------------------------------------------------ sequence diagrams
+
+def seq(p, lanes, msgs, step=18, boundary=None, frames=(), created=(), footer=""):
+    """Generic sequence diagram.
+    lanes: (key, [header lines], x); msgs: (kind, from, to, label) with kind call|ret|self|create.
+    boundary: ("top" | "bottom", line1, line2). frames: (label, first msg, last msg, x1, x2).
+    Activations are derived from matching call/return pairs."""
     X = {k: x for k, _, x in lanes}
-    head_y, head_h, step = 14, 34, 19
-    msgs = [
-        ("call", "main", "replay", "next(history)"),
-        ("ret", "replay", "main", 'targetId "B12"'),
-        ("self", "main", None, "parse JSON request (MiniJson)"),
-        ("call", "main", "app", 'propose("B12")'),
-        ("call", "app", "rules", 'requireIdentifier("B12")'),
-        ("self", "app", None, 'target = spaces.get("B12")  → b12'),
-        ("call", "app", "policy", "isEligible(b1, b12)"),
-        ("call", "policy", "b12", "getId()"),
-        ("ret", "b12", "policy", '"B12"'),
-        ("call", "policy", "b1", "getSpaceId()"),
-        ("ret", "b1", "policy", '"A17"'),
-        ("call", "policy", "b12", "isAvailable()"),
-        ("ret", "b12", "policy", "true (open, not occupied)"),
-        ("ret", "policy", "app", "true"),
-        ("self", "app", None, 'nextProposalId()  → "P1"'),
-        ("call", "app", "b1", "getId()"),
-        ("ret", "b1", "app", '"B1"'),
-        ("call", "app", "b1", "getVersion()"),
-        ("ret", "b1", "app", "0"),
-        ("call", "app", "policy", "getVersion()"),
-        ("ret", "policy", "app", "1"),
-        ("create", "app", "p1", '«create» Proposal("P1", "B1", "B12", 0, 1)'),
-        ("self", "app", None, "proposals.add(p1)"),
-        ("call", "app", "p1", "toView()"),
-        ("ret", "p1", "app", "ProposalView(P1, …, PENDING)"),
-        ("ret", "app", "main", "ProposalView(P1, PENDING)"),
-        ("self", "main", None, 'print "AWAITING_APPROVAL"'),
-    ]
-    # y position of each message
-    ys, y = [], head_y + head_h + 24
-    for kind, *_ in msgs:
+    head_h = 34
+    top_pad = 70 if boundary and boundary[0] == "top" else 0
+    head_y = 14 + top_pad
+    ys, y = [], head_y + head_h + 22
+    frame_starts = {f[1] for f in frames}
+    for i, (kind, *_rest) in enumerate(msgs):
+        if i in frame_starts:
+            y += 16
         if kind == "create":
             y += 10
         ys.append(y)
         y += step + (10 if kind == "self" else 0) + (10 if kind == "create" else 0)
-    boundary_y = y + 14
-    bottom = boundary_y + 58
-    create_y = ys[[m[0] for m in msgs].index("create")]
+    end_y = y + 6
+    bottom = end_y + (70 if boundary and boundary[0] == "bottom" else 10)
 
-    # activation bars: lane -> list of (first message index, last message index)
-    acts = {"main": [(0, len(msgs) - 1)], "replay": [(0, 1)], "app": [(3, 25)], "rules": [(4, 4)],
-            "policy": [(6, 13), (19, 20)], "b12": [(7, 8), (11, 12)], "b1": [(9, 10), (15, 16), (17, 18)],
-            "p1": [(23, 24)]}
-    out = [defs(p)]
+    created_y = {}
+    for (kind, a, b, s), my in zip(msgs, ys):
+        if kind == "create" and b in created:
+            created_y[b] = my
+
+    # activations from call/return pairs
+    bars, stack = [], [(msgs[0][1], 0)]
+    for i, (kind, a, b, s) in enumerate(msgs):
+        if kind == "call":
+            stack.append((b, i))
+        elif kind == "ret":
+            while stack and stack[-1][0] != a:
+                k, start = stack.pop()
+                bars.append((k, start, start))
+            if stack:
+                k, start = stack.pop()
+                bars.append((k, start, i))
+    bars += [(k, start, len(msgs) - 1) for k, start in stack]
+
+    out, heads, tags = [defs(p)], [], []
+    if boundary and boundary[0] == "top":
+        out.append(f'<line x1="12" y1="18" x2="988" y2="18" stroke="#222" stroke-width="2.2" stroke-dasharray="10,5"/>')
+        out.append(label(500, 38, boundary[1], size=11))
+        out.append(label(500, 55, boundary[2], size=10.5))
     for key, lines, x in lanes:
-        top = create_y - head_h / 2 if key == "p1" else head_y
+        top = created_y[key] - head_h / 2 if key in created_y else head_y
         w = max(len(s) for s in lines) * 6.0 + 16
-        out.append(f'<line x1="{x}" y1="{top + head_h}" x2="{x}" y2="{bottom}" stroke="#666" stroke-dasharray="4,3"/>')
-        out.append(f'<rect x="{x - w / 2:.1f}" y="{top:.1f}" width="{w:.1f}" height="{head_h}" fill="#fff" stroke="#222"/>')
+        out.append(f'<line x1="{x}" y1="{top + head_h}" x2="{x}" y2="{end_y}" stroke="#666" stroke-dasharray="4,3"/>')
+        heads.append(f'<rect x="{x - w / 2:.1f}" y="{top:.1f}" width="{w:.1f}" height="{head_h}" fill="#fff" stroke="#222"/>')
         if len(lines) == 1:
-            out.append(text(x, top + 21, lines[0], size=10.5, anchor="middle", bold=True))
+            heads.append(text(x, top + 21, lines[0], size=10.5, anchor="middle", bold=True))
         else:
-            out.append(text(x, top + 14, lines[0], size=9.5, anchor="middle"))
-            out.append(text(x, top + 27, lines[1], size=10.5, anchor="middle", bold=True))
-    bars = []
-    for key, spans in acts.items():
-        for a, b in spans:
-            y1 = ys[a] - 6
-            y2 = ys[b] + (22 if msgs[b][0] == "self" else 6)
-            bars.append(f'<rect x="{X[key] - 5}" y="{y1:.1f}" width="10" height="{y2 - y1:.1f}" fill="#f2f2f2" stroke="#222"/>')
+            heads.append(text(x, top + 14, lines[0], size=9.5, anchor="middle"))
+            heads.append(text(x, top + 27, lines[1], size=10.5, anchor="middle", bold=True))
+    for label_text, a, b, x1, x2 in frames:
+        y1, y2 = ys[a] - 24, ys[b] + 26
+        out.append(f'<rect x="{x1}" y="{y1:.1f}" width="{x2 - x1}" height="{y2 - y1:.1f}" fill="none" stroke="#444"/>')
+        tw = len(label_text) * 5.6 + 14
+        tags.append(f'<path d="M{x1},{y1:.1f} h{tw:.1f} v10 l-6,6 h-{tw - 6:.1f} Z" fill="#fff" stroke="#444"/>')
+        tags.append(text(x1 + 5, y1 + 12, label_text, size=9.5, bold=True))
+    rects = []
+    for key, a, b in bars:
+        if key not in X:
+            continue
+        y1 = ys[a] - 6
+        y2 = ys[b] + (22 if msgs[b][0] == "self" else 6)
+        rects.append(f'<rect x="{X[key] - 5}" y="{y1:.1f}" width="10" height="{max(y2 - y1, 12):.1f}" fill="#f2f2f2" stroke="#222"/>')
 
     backgrounds, labels = [], []
+    lane_w = {k: max(len(s) for s in lines) * 6.0 + 16 for k, lines, _ in lanes}
     for (kind, a, b, s), my in zip(msgs, ys):
         if kind == "self":
             x = X[a] + 5
@@ -298,24 +422,188 @@ def sequence_diagram():
         x1, x2 = X[a], X[b]
         sign = 1 if x2 > x1 else -1
         start = x1 + 5 * sign
-        if kind == "create":
-            end = X[b] - (len("p1:Proposal") * 6.0 + 16) / 2
-        else:
-            end = x2 - 5 * sign
+        end = x2 - (lane_w[b] / 2) * sign if kind == "create" and b in created else x2 - 5 * sign
         dash = ' stroke-dasharray="5,3"' if kind in ("ret", "create") else ""
         marker = "solid" if kind == "call" else "open"
         out.append(f'<line x1="{start:.1f}" y1="{my}" x2="{end:.1f}" y2="{my}" stroke="#222"{dash} marker-end="url(#{p}{marker})"/>')
-        bg, fg = label((start + end) / 2, my - 4, s, split=True)
-        backgrounds.append(bg)
-        labels.append(fg)
-    out += backgrounds + bars + labels
+        if s:
+            bg, fg = label((start + end) / 2, my - 4, s, split=True)
+            backgrounds.append(bg)
+            labels.append(fg)
+    out += backgrounds + rects + labels + tags + heads
 
-    out.append(f'<line x1="12" y1="{boundary_y}" x2="988" y2="{boundary_y}" stroke="#222" stroke-width="2.2" stroke-dasharray="10,5"/>')
-    out.append(label(500, boundary_y + 19, "APPROVAL BOUNDARY: only a separate operator action may approve or reject P1 (D2).", size=11))
-    out.append(label(500, boundary_y + 36, "D1 stops here. b1 remains at A17, version 0; nothing is approved, executed or moved.", size=10.5))
-    out.append(text(12, bottom + 16, "Solid line, filled arrow: call.  Dashed line, open arrow: return or «create».  "
-                                     "Shaded bars: activations.  Only calls with a visible effect on this path are shown.", size=10))
+    if boundary and boundary[0] == "bottom":
+        by = end_y + 14
+        out.append(f'<line x1="12" y1="{by}" x2="988" y2="{by}" stroke="#222" stroke-width="2.2" stroke-dasharray="10,5"/>')
+        out.append(label(500, by + 19, boundary[1], size=11))
+        out.append(label(500, by + 36, boundary[2], size=10.5))
+    out.append(text(12, bottom + 16, footer or "Solid line, filled arrow: call.  Dashed line, open arrow: return or «create».  "
+                                              "Shaded bars: activations.", size=10))
     return f'<svg viewBox="0 0 1000 {bottom + 24}" xmlns="http://www.w3.org/2000/svg">{"".join(out)}</svg>'
+
+
+def sequence_run():
+    """Figure 3: the replayed agent run up to the pending proposal (bash run.sh run scripted, step 2)."""
+    lanes = [("main", [":Main"], 45), ("app", ["app:StudentApplication"], 175), ("runner", [":AgentRunner"], 330),
+             ("replay", [":ReplayProvider"], 460), ("parser", ["«static»", "ToolRequestParser"], 590),
+             ("policy", [":EligibilityPolicy"], 715), ("store", ["store:ParkingStore"], 830),
+             ("p1", ["p1:Proposal"], 935)]
+    msgs = [
+        ("call", "main", "app", "run(replay, 6)"),
+        ("create", "app", "runner", "«create»"),
+        ("call", "app", "runner", "run()"),
+        ("call", "runner", "replay", "next(history)"),
+        ("ret", "replay", "runner", "READ_BOOKING request"),
+        ("call", "runner", "parser", 'parse(reply, "B1", spaceIds)'),
+        ("ret", "parser", "runner", "accepted"),
+        ("call", "runner", "app", "bookingSnapshot()"),
+        ("ret", "app", "runner", "B1: A17, version 0"),
+        ("self", "runner", None, "observe(OK, policyVersion 1)"),
+        ("call", "runner", "replay", "next(history)"),
+        ("ret", "replay", "runner", "LIST_ALTERNATIVES request"),
+        ("call", "runner", "parser", "parse(…)"),
+        ("ret", "parser", "runner", "accepted"),
+        ("self", "runner", None, "isStale() → false"),
+        ("call", "runner", "app", "alternatives()"),
+        ("call", "app", "policy", "isEligible(b1, space) for each"),
+        ("ret", "policy", "app", "B12, C03 eligible"),
+        ("ret", "app", "runner", '["B12","C03"]'),
+        ("self", "runner", None, "observe(OK, alternatives)"),
+        ("call", "runner", "replay", "next(history)"),
+        ("ret", "replay", "runner", "PROPOSE_REASSIGNMENT B12"),
+        ("call", "runner", "parser", "parse(…)"),
+        ("ret", "parser", "runner", "accepted"),
+        ("self", "runner", None, "isStale() → false"),
+        ("call", "runner", "app", 'propose("B12")'),
+        ("call", "app", "policy", "isEligible(b1, b12)"),
+        ("ret", "policy", "app", "true"),
+        ("create", "app", "p1", '«create» ("P1", "B1", "B12", 0, 1): PENDING'),
+        ("call", "app", "store", "addProposal(p1)"),
+        ("ret", "store", "app", ""),
+        ("ret", "app", "runner", "ProposalView(P1, PENDING)"),
+        ("self", "runner", None, "observe(AWAITING_APPROVAL)"),
+        ("ret", "runner", "app", "AgentResult(AWAITING_APPROVAL, 3 calls, P1)"),
+        ("ret", "app", "main", "AgentResult"),
+    ]
+    return seq("s1-", lanes, msgs, step=17, created={"runner", "p1"},
+               frames=[("loop [calls < limit]: one model call per turn", 3, 32, 105, 990)],
+               boundary=("bottom", "APPROVAL BOUNDARY: the run stops at AWAITING_APPROVAL. P1 is PENDING; B1 is still at A17, version 0.",
+                         "Nothing in the run can approve or execute. Only a separate operator command continues (Figure 4)."),
+               footer="Solid line, filled arrow: call.  Dashed line, open arrow: return or «create».  Each turn also "
+                      "appends the reply and the observation to the history.  An invalid reply is answered with REJECTED and counted.")
+
+
+def sequence_execute():
+    """Figure 4: operator approval, execution with re-checks, and the repeated execution."""
+    lanes = [("main", ["operator command", ":Main"], 50), ("app", ["app:StudentApplication"], 205),
+             ("store", ["store:ParkingStore"], 350), ("p1", ["p1:Proposal"], 460),
+             ("policy", [":EligibilityPolicy"], 565), ("b1", ["b1:Booking"], 675),
+             ("a17", ["a17:Space"], 775), ("b12", ["b12:Space"], 870), ("b1n", ["b1′:Booking"], 955)]
+    msgs = [
+        ("call", "main", "app", 'approve("P1")'),
+        ("call", "app", "store", 'proposal("P1")'),
+        ("ret", "store", "app", "p1"),
+        ("call", "app", "p1", "approve()"),
+        ("ret", "p1", "app", "PENDING → APPROVED"),
+        ("ret", "app", "main", "P1: APPROVED"),
+        ("call", "main", "app", 'execute("P1")'),
+        ("call", "app", "store", 'proposal("P1")'),
+        ("ret", "store", "app", "p1"),
+        ("call", "app", "p1", "getStatus()"),
+        ("ret", "p1", "app", "APPROVED (not EXECUTED)"),
+        ("self", "app", None, "observed 0/1 = current 0/1 (not STALE)"),
+        ("call", "app", "policy", "isEligible(b1, b12)"),
+        ("call", "policy", "b12", "isAvailable()"),
+        ("ret", "b12", "policy", "true"),
+        ("ret", "policy", "app", "true"),
+        ("self", "app", None, "commit(p1, b1, b12)"),
+        ("call", "app", "b12", "occupy()"),
+        ("ret", "b12", "app", ""),
+        ("call", "app", "a17", "release()"),
+        ("ret", "a17", "app", ""),
+        ("call", "app", "b1", 'movedTo("B12")'),
+        ("create", "b1", "b1n", "«create» (B12, version 1)"),
+        ("ret", "b1", "app", "b1′"),
+        ("call", "app", "store", "replaceBooking(b1′)"),
+        ("ret", "store", "app", ""),
+        ("call", "app", "p1", "markExecuted()"),
+        ("ret", "p1", "app", "APPROVED → EXECUTED"),
+        ("call", "app", "store", "recordCommit(c)"),
+        ("ret", "store", "app", ""),
+        ("call", "app", "store", "addNotification(n)"),
+        ("ret", "store", "app", ""),
+        ("ret", "app", "main", "COMMITTED"),
+        ("call", "main", "app", 'execute("P1")  again'),
+        ("call", "app", "p1", "getStatus()"),
+        ("ret", "p1", "app", "EXECUTED"),
+        ("ret", "app", "main", "DUPLICATE"),
+    ]
+    return seq("s2-", lanes, msgs, step=17, created={"b1n"},
+               boundary=("top", "APPROVAL BOUNDARY (continued from Figure 3): each call below is a separate operator command.",
+                         "The model is not involved. execute() runs every check and the commit with no model or external call in between."),
+               footer="Solid line, filled arrow: call.  Dashed line, open arrow: return or «create».  A failed check "
+                      "returns NOT_APPROVED, STALE or UNAVAILABLE_OR_INELIGIBLE before commit() and changes nothing.")
+
+
+# --------------------------------------------------------------- state diagram
+
+def state_diagram():
+    """Figure 5: proposal states and transitions."""
+    p = "st-"
+    W, H = 150, 46
+    S = {"PENDING": (300, 150), "APPROVED": (620, 150), "REJECTED": (300, 400), "EXECUTED": (620, 400)}
+
+    def box(name):
+        x, y = S[name]
+        return (f'<rect x="{x - W / 2}" y="{y - H / 2}" width="{W}" height="{H}" rx="14" fill="#fff" stroke="#222" stroke-width="1.4"/>'
+                + text(x, y + 5, name, size=12.5, anchor="middle", bold=True))
+
+    def arrow(x1, y1, x2, y2, s, lx, ly, anchor="middle"):
+        return (f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#222" stroke-width="1.3" marker-end="url(#{p}open)"/>'
+                + label(lx, ly, s, size=10.5, anchor=anchor))
+
+    def loop(name, side, lines):
+        x, y = S[name]
+        if side == "top":
+            d = f"M{x - 30},{y - H / 2} C{x - 40},{y - 95} {x + 40},{y - 95} {x + 30},{y - H / 2}"
+            lx, ly, anchor = x, y - 92, "middle"
+        elif side == "right":
+            d = f"M{x + W / 2},{y - 12} C{x + W / 2 + 70},{y - 40} {x + W / 2 + 70},{y + 40} {x + W / 2},{y + 12}"
+            lx, ly, anchor = x + W / 2 + 62, y - 6, "start"
+        else:
+            d = f"M{x - W / 2},{y - 12} C{x - W / 2 - 70},{y - 40} {x - W / 2 - 70},{y + 40} {x - W / 2},{y + 12}"
+            lx, ly, anchor = x - W / 2 - 62, y - 6, "end"
+        out = [f'<path d="{d}" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#{p}open)"/>']
+        for i, s in enumerate(lines):
+            out.append(label(lx, ly + i * 15, s, size=10.5, anchor=anchor))
+        return "".join(out)
+
+    out = [defs(p)]
+    out.append('<circle cx="80" cy="150" r="9" fill="#222"/>')
+    out.append(arrow(89, 150, 300 - W / 2, 150, "propose(target) [target eligible]", 140, 128))
+    out.append(arrow(300 + W / 2, 150, 620 - W / 2, 150, "approve()", 460, 140))
+    out.append(label(460, 172, "operator", size=9.5, italic=True))
+    out.append(arrow(300, 150 + H / 2, 300, 400 - H / 2, "reject()  (operator)", 306, 280, anchor="start"))
+    out.append(arrow(620, 150 + H / 2, 620, 400 - H / 2, "execute() [versions match and target eligible]", 626, 268, anchor="start"))
+    out.append(label(626, 284, "/ commit: move booking, version + 1, record", size=10.5, anchor="start"))
+    out.append(label(626, 299, "one commit and one notification → COMMITTED", size=10.5, anchor="start"))
+    out.append(loop("PENDING", "top", ["execute() / NOT_APPROVED, no change"]))
+    out.append(loop("APPROVED", "top", ["execute() [version changed] / STALE, no change",
+                                        "execute() [target closed or taken] / UNAVAILABLE_OR_INELIGIBLE, no change"]))
+    out.append(loop("REJECTED", "left", ["execute() / NOT_APPROVED,", "no change"]))
+    out.append(loop("EXECUTED", "right", ["execute() / DUPLICATE,", "no second commit", "or notification"]))
+    for name in S:
+        out.append(box(name))
+    for name in ("REJECTED", "EXECUTED"):
+        x, y = S[name]
+        out.append(f'<line x1="{x}" y1="{y + H / 2}" x2="{x}" y2="{y + H / 2 + 34}" stroke="#222" stroke-width="1.3" marker-end="url(#{p}open)"/>')
+        out.append(f'<circle cx="{x}" cy="{y + H / 2 + 44}" r="10" fill="#fff" stroke="#222" stroke-width="1.3"/>'
+                   f'<circle cx="{x}" cy="{y + H / 2 + 44}" r="6" fill="#222"/>')
+    out.append(text(20, 520, "approve() or reject() on any state other than PENDING, and markExecuted() on any state other "
+                             "than APPROVED, throw IllegalStateException and leave the status unchanged.", size=10.5))
+    out.append(text(20, 537, "REJECTED and EXECUTED are final.  The model can only cause the first transition (propose); "
+                             "every other transition is an operator command checked in Java.", size=10.5))
+    return f'<svg viewBox="0 0 1000 550" xmlns="http://www.w3.org/2000/svg">{"".join(out)}</svg>'
 
 
 # ------------------------------------------------------------------- document
@@ -354,147 +642,197 @@ li { margin-bottom: 2pt; }
 
 def document():
     s = []
-    s.append("<h1>ParkOps D1: Design</h1>")
-    s.append('<div class="meta">EECS 3311 B, Fall 2026 · Deliverable 1: design and executable proposal path · '
-             "Route A (ParkOps) · Bryan Maristanez · October 2026</div>")
+    s.append("<h1>ParkOps D2: Design</h1>")
+    s.append('<div class="meta">EECS 3311 B, Fall 2026 · Deliverable 2: a working supervised agent · '
+             "Route A (ParkOps) · Bryan Maristanez · November 2026</div>")
 
     s.append("<h2>1. Scope</h2>")
-    s.append(f"<p>D1 implements the validated domain model and the executable proposal path for the supplied "
-             f"fixture. {c('StudentApplication.propose(String)')} reads booking B1, evaluates a target space under "
-             f"policy version 1, and stores a {c('PENDING')} proposal that records the booking and policy versions "
-             f"it observed. The booking never moves; approval and execution are D2 work. "
-             f"{c('bash run.sh run scripted')} demonstrates the accepted target B12 and the rejected targets D09 and "
-             f"Z99 using replayed input, which is not a live model run. Figure 1 (class diagram) and Figure 2 "
-             f"(sequence diagram) follow the text on separate pages.</p>")
+    s.append(f"<p>D2 turns D1's proposal path into a supervised agent for the supplied fixture. "
+             f"{c('StudentApplication.run(ModelProvider, int)')} runs a bounded model/tool loop that can read booking B1, "
+             f"list eligible spaces and create one {c('PENDING')} proposal, and then stops. Separate operator commands "
+             f"({c('approve')}, {c('reject')}, {c('execute')}) decide what happens next; {c('execute')} re-checks the "
+             f"current state and either commits once or returns a named refusal. {c('tick(long)')} detects bookings on "
+             f"closed spaces with caller-supplied time. Policy version 1 stays in force. {c('bash run.sh run scripted')} "
+             f"demonstrates every path with replayed responses (not a live model run); {c('bash run.sh run live')} uses the "
+             f"same loop with the supplied Ollama adapter. Figures 1–5 follow the text.</p>")
 
-    s.append("<h2>2. Responsibilities</h2>")
-    s.append(table(["Class", "Responsibility", "How its state is protected"], [
-        [c("DomainRules") + "<br>(starter TODOs completed)",
-         f"The single home for the identifier rule {c('[A-Z][A-Z0-9_-]{0,15}')} and the 1–24 hour duration rule.",
-         "Private constructor; static guards throw " + c("IllegalArgumentException") + "; the pattern is compiled once as a constant."],
-        [c("Booking"),
-         "One booking: id, assigned space, duration, version and accessibility requirement.",
-         "The constructor validates every argument before assigning; all fields are " + c("private final") + "; getters only."],
-        [c("Space"),
-         f"One space's id and open, occupied and accessible flags. {c('isAvailable()')} is the only definition of "
-         f"“available”: open and not occupied.",
-         "Validated id; " + c("private final") + " fields; no setters."],
-        [c("ProposalStatus"), f"The four proposal states: {c('PENDING')}, {c('APPROVED')}, {c('REJECTED')}, {c('EXECUTED')}.",
-         "An enum, so no other status value can exist."],
-        [c("Proposal"),
-         "A proposed reassignment, kept separate from the " + c("Booking") + " it would change. Records its id, the "
-         "booking, the target space, the observed booking and policy versions, and its status.",
-         "Ids and versions are validated; the constructor always sets " + c("PENDING") + " and there is no setter; "
-         + c("toView()") + " hands out an immutable " + c("ProposalView") + "."],
-        [c("EligibilityPolicy"),
-         "Policy version 1: a target is eligible when it is not the booking's current space and is available. "
-         "Carries its own version number.",
-         "Stateless; " + c("isEligible") + " changes nothing."],
-        [c("StudentApplication") + "<br>(starter class rewritten)",
-         "Owns the in-memory state of one run: builds a " + c("Booking") + " and four " + c("Space") + " objects from "
-         + c("Fixture") + ", stores proposals, generates ids " + c("P1") + ", " + c("P2") + ", …, and implements "
-         + c("propose") + ".",
-         "Collections are private. Callers receive read-only copies from " + c("bookingSnapshot()") + ", "
-         + c("spaceSnapshot(String)") + " and " + c("proposals()") + ". Each instance builds its own objects, so "
-         "two applications never share state."],
-        [c("Main") + "<br>(starter, " + c("scripted") + " mode extended)",
-         "Demonstration: feeds three replayed requests (B12, D09, Z99) to " + c("propose") + " and prints the result "
-         "and the booking after each.",
-         "Never approves or executes."],
+    s.append("<h2>2. Components and dependencies</h2>")
+    s.append("<p>The code is split into the four kinds D2.4 names. Dependencies point inward: the model protocol "
+             "and the domain know nothing about coordination or storage, and the domain imports nothing outside itself.</p>")
+    s.append(table(["Kind", "Classes", "Responsibility", "Depends on"], [
+        ["Model protocol", c("Tool") + ", " + c("ToolRequest") + ", " + c("ToolRequestParser"),
+         "Turn untrusted reply text into a checked request or a rejection reason: exactly three string properties, "
+         "one of four tools, goal booking B1, an empty " + c("targetId") + " except for a proposal naming a known space. "
+         "Never runs anything.",
+         c("MiniJson") + " (starter); the goal id and space ids are passed in, so it never reads storage"],
+        ["Coordination", c("StudentApplication") + ", " + c("AgentRunner") + ", " + c("PeriodicChecker"),
+         c("StudentApplication") + " is the only entry point: queries, " + c("propose") + ", operator commands and "
+         + c("tick") + ". " + c("AgentRunner") + " owns one conversation: call limit, history, invalid count, "
+         "read → list → propose order, stale-version checks and the one-active-proposal rule. " + c("PeriodicChecker") + " owns tick time and "
+         "duplicate suppression.",
+         "Protocol, domain, storage; " + c("ModelProvider")],
+        ["Domain rules", c("Booking") + ", " + c("Space") + ", " + c("Proposal") + ", " + c("ProposalStatus") + ", "
+         + c("EligibilityPolicy") + ", " + c("ExecutionOutcome") + ", " + c("DomainRules"),
+         "Validation, the policy-1 rule, legal status transitions ("+ c("approve") + "/" + c("reject") + " only from "
+         + c("PENDING") + ", " + c("markExecuted") + " only from " + c("APPROVED") + "), and controlled changes: "
+         + c("Booking.movedTo") + " and " + c("withDuration") + " return copies with version + 1; " + c("Space")
+         + " changes only through " + c("occupy") + ", " + c("release") + ", " + c("close") + ". " + c("ExecutionOutcome")
+         + " names the five execution results (Figure 1 draws it with the values returned to callers).",
+         "Nothing outside the domain"],
+        ["Data storage", c("ParkingStore") + ", " + c("CommitRecord") + ", " + c("Notification"),
+         "Holds the booking, spaces, proposals and the commit and simulated-notification records for one application. "
+         "Stores and finds; no rules.",
+         "Domain"],
+        ["Provider boundary (starter)", c("ModelProvider") + ", " + c("ReplayProvider") + ", " + c("OllamaProvider")
+         + ", " + c("ChatMessage"),
+         c("ReplayProvider") + " is the deterministic test double; " + c("OllamaProvider") + " is the real route. "
+         "Both return untrusted text through the same interface, so replay and live share one loop.",
+         c("MiniJson")],
+    ]))
+    s.append(f"<p>Callers only ever receive copies: snapshot maps, {c('ProposalView')}, {c('AgentResult')} (its "
+             f"transcript is copied), and immutable records. {c('StudentApplication')} keeps its {c('ParkingStore')} "
+             f"and {c('PeriodicChecker')} in private fields and never returns them or the domain objects they hold, so "
+             f"every change goes through its checked methods.</p>")
+
+    s.append("<h2>3. Proposal lifecycle</h2>")
+    s.append(f"<p>Figure 5 draws these transitions. {c('execute')} checks, in order: the proposal exists and is for "
+             f"B1; already {c('EXECUTED')} → {c('DUPLICATE')}; not {c('APPROVED')} → {c('NOT_APPROVED')}; booking or "
+             f"policy version differs from the recorded one → {c('STALE')}; target not eligible now → "
+             f"{c('UNAVAILABLE_OR_INELIGIBLE')}. Only when all pass does {c('commit')} occupy the target, release the old "
+             f"space, swap in the moved booking (version + 1), mark the proposal executed and append one commit and one "
+             f"notification. The checks and the commit run in one method with no model or external call in between; "
+             f"this is a sequential guarantee only, not safety under concurrent processes.</p>")
+    s.append(table(["Status", "approve()", "reject()", "execute()"], [
+        [c("PENDING"), "→ " + c("APPROVED"), "→ " + c("REJECTED"), c("NOT_APPROVED") + "; no change"],
+        [c("APPROVED"), "refused (" + c("IllegalStateException") + "); no change", "refused; no change",
+         "→ " + c("EXECUTED") + " and " + c("COMMITTED") + " if versions match and the target is eligible; otherwise "
+         + c("STALE") + " or " + c("UNAVAILABLE_OR_INELIGIBLE") + ", still " + c("APPROVED") + ", no change"],
+        [c("REJECTED"), "refused; no change", "refused; no change", c("NOT_APPROVED") + "; no change"],
+        [c("EXECUTED"), "refused; no change", "refused; no change", c("DUPLICATE") + "; no second commit or notification"],
     ]))
 
-    s.append("<h2>3. Design decisions and the alternatives rejected</h2>")
-    s.append("<h3>Alternative considered: where the eligibility rule lives</h3>")
-    s.append(f"<p>The rule could have been an {c('if')} inside {c('StudentApplication.propose')}, or a method such as "
-             f"{c('Space.isEligibleFor(Booking)')}. It was placed in its own class, {c('EligibilityPolicy')}, with its "
-             f"version number beside it. D3 replaces policy version 1 with version 2, which also requires an accessible "
-             f"target when the booking requires one, and must reject proposals created under the old version. With the "
-             f"rule and its version in one object, {c('propose')} records {c('policy.getVersion()')} in every proposal, "
-             f"D3 changes a single class, and D2's list-alternatives tool can reuse {c('isEligible')}. An inline "
-             f"{c('if')} would have mixed the rule with id generation and storage, and a method on {c('Space')} would "
-             f"have made a space depend on a booking policy it should not know about.</p>")
-    s.append(table(["Decision", "Alternative rejected", "Reason"], [
-        ["The status is the enum " + c("ProposalStatus"), "A " + c("String") + " status",
-         "A misspelt status cannot compile, and no status outside the brief's four can exist. " + c("toView()")
-         + " converts with " + c("status.name()") + " because the supplied " + c("ProposalView") + " stores a "
-         + c("String") + "."],
-        [c("Proposal") + "'s constructor always sets " + c("PENDING") + "; no setter",
-         "Status as a constructor parameter, or a " + c("setStatus") + " method",
-         "No caller can create an already-approved proposal; the brief says approval never comes from the model. "
-         "D2 will add controlled transitions that are legal only from " + c("PENDING") + "."],
-        ["Callers receive copies: snapshot maps and a list of " + c("ProposalView") + " records",
-         "Returning the " + c("Booking") + " and " + c("Space") + " objects or the internal " + c("List<Proposal>"),
-         "A caller cannot clear or add stored proposals, or later reach objects that D2 makes mutable "
-         "(occupancy, proposal status). This is acceptance case D1-F."],
-        ["Domain objects are built from the supplied " + c("Fixture") + " in the constructor",
-         "Hard-coding " + c('new Booking("B1", …)') + " inside " + c("StudentApplication"),
-         "The fixture stays the single source of truth, and its data passes through the same validating "
-         "constructors as any other input."],
+    s.append("<h2>4. Two design decisions</h2>")
+    s.append("<h3>4.1 The loop reaches the domain only through the application's public methods</h3>")
+    s.append(f"<p><b>Problem.</b> The model's choices must never bypass a check that an operator call would go "
+             f"through, and must never be able to approve or execute. <b>Decision.</b> {c('AgentRunner')} holds a "
+             f"{c('StudentApplication')} and calls only its public methods ({c('bookingSnapshot')}, "
+             f"{c('alternatives')}, {c('propose')}, {c('policyVersion')}, {c('spaceIds')}). The propose tool goes "
+             f"through the same {c('propose')} that D1 tests, and its {c('IllegalArgumentException')} becomes a tool "
+             f"error the model can react to. No approve or execute tool exists, and the parser rejects any extra "
+             f"property such as {c('\"approved\":true')}, so the only path from a reply to a commit is a separate "
+             f"operator command. <b>Alternative rejected:</b> giving the runner the store and the domain objects "
+             f"directly. It would save a few methods, but every tool would need its own copy of the eligibility and "
+             f"version checks, and a bug there could change state the operator never saw. Enforcing the boundary in "
+             f"Java rather than in the system prompt is what the brief requires: the prompt describes the protocol, "
+             f"but nothing depends on the model obeying it.</p>")
+    s.append("<h3>4.2 Execution returns an outcome enum from one method that both checks and commits</h3>")
+    s.append(f"<p><b>Problem.</b> Five results must be distinguishable, tests must assert them with unchanged "
+             f"state, and validation must not be separated from mutation. <b>Decision.</b> {c('execute')} returns "
+             f"{c('ExecutionOutcome')} and performs every check and the commit itself; {c('commit')} is the only place "
+             f"a booking moves. <b>Alternative rejected:</b> one exception type per refusal (as D1's "
+             f"{c('propose')} does). Refusals here are normal operator outcomes, not errors, so exceptions would make "
+             f"{c('DUPLICATE')} look like a failure and would force callers into control flow by catch blocks. A "
+             f"separate {c('canExecute')} query followed by {c('commit')} was also rejected because it reopens the "
+             f"check-then-act gap. Unknown proposal ids remain {c('IllegalArgumentException')}: that is a caller "
+             f"mistake, not an outcome.</p>")
+    s.append(table(["Other choice", "Alternative rejected", "Reason"], [
+        [c("Booking") + " stays immutable; changes return copies with version + 1",
+         "A mutating " + c("moveTo"), "Every change raises the version exactly once, so stale detection cannot be "
+         "skipped; the store swaps the copy in."],
+        [c("Space") + " flags change only through " + c("occupy") + "/" + c("release") + "/" + c("close"),
+         "Immutable copies like " + c("Booking"), "A space has no version to bump, so copies would add code for nothing; "
+         + c("occupy") + " refuses a taken space as a backstop."],
+        ["The parser returns a result value", "Throwing on bad input",
+         "Bad replies are expected input: the loop must count them and send the reason back."],
+        [c("tick(long seconds)") + " takes time as an argument", "An injected " + c("Clock"),
+         "The simplest controllable monotonic time; tests and the demo need no waiting."],
     ]))
 
-    s.append("<h2>4. Operation contracts</h2>")
-    s.append(f"<h3>4.1 {c('StudentApplication.propose(String targetId): ProposalView')}</h3>")
+    s.append("<h2>5. Periodic detection and the conservative retry policy</h2>")
+    s.append(f"<p>{c('tick(t)')} rejects a time below the previous tick with a clear "
+             f"{c('IllegalArgumentException')} and changes nothing. The first tick scans; after that a scan happens "
+             f"on the first tick at or past each boundary of the 60-second grid that starts at the first tick "
+             f"(first + 60, first + 120, …), so a late tick does not shift later boundaries. A scan finds bookings on closed spaces and emits a {c('WorkItem')} once per "
+             f"(booking, booking version, policy version), and not at all while a {c('PENDING')} or {c('APPROVED')} "
+             f"proposal exists for that pair; the agent likewise refuses to propose while such a proposal exists, so "
+             f"repeated work never issues a second active proposal for the same state. Ticks 0, 59 and 60 therefore "
+             f"give one item, then none (no scan), then none (scan, pair already emitted). "
+             f"<b>Retry policy:</b> once a pair has been emitted it is not emitted again on its own, even if the agent "
+             f"run failed ({c('STEP_LIMIT')}, {c('PROVIDER_ERROR')}) or the operator rejected the proposal. New work "
+             f"needs an explicit operator {c('retry(bookingId)')} or a relevant version change (a changed booking or a "
+             f"new policy makes a new pair). This avoids a failing model being called again every minute for the same "
+             f"state, at the cost of a human having to notice and retry. {c('tick')} never calls the model or proposes "
+             f"anything.</p>")
+
+    s.append("<h2>6. A rejected model/tool interaction</h2>")
+    s.append(f"<p>From {c('run scripted')} step 7 (replay, not a live model): the first reply tries to grant itself "
+             f"authority. Java rejects it before any tool runs, counts it as an invalid response and tells the model why:</p>")
+    s.append("<p><code>[assistant] {\"tool\":\"PROPOSE_REASSIGNMENT\",\"bookingId\":\"B1\",\"targetId\":\"B12\","
+             "\"approved\":true}</code><br><code>[user] {\"status\":\"REJECTED\",\"reason\":\"unexpected property: "
+             "approved\"}</code></p>")
+    s.append(f"<p>Nothing is proposed or approved. After six invalid replies the run ends with {c('STEP_LIMIT')} "
+             f"after exactly six calls and no proposal. A valid request used wrongly is a <i>tool error</i> instead: "
+             f"proposing D09 returns {c('TOOL_ERROR')} (“Target D09 is not eligible under policy version 1”), and if B1's "
+             f"version changes between the read and the list, the list returns {c('TOOL_ERROR')} asking for a new "
+             f"{c('READ_BOOKING')}. Tool errors use a call but are not counted as invalid.</p>")
+
+    s.append("<h2>7. Testing and evidence</h2>")
+    s.append(f"<p>{c('bash run.sh check')} runs the 14 supplied public checks (plain Java); {c('bash run.sh test')} "
+             f"runs 129 JUnit Jupiter tests, all passing: the 14 checks, the infrastructure test and 114 student tests, "
+             f"including every D1 regression. Rejection tests compare a captured protected state (booking, all four "
+             f"spaces, proposal statuses, commit and notification counts) before and after. {c('TEST_PLAN.md')} maps "
+             f"each case; {c('results/d2.txt')} holds the dated output and the tick trace.</p>")
+    s.append(table(["Case", "Test (StudentTests)", "Case", "Test (StudentTests)"], [
+        ["D2-A", c("d2A_replayStopsAtPendingProposal…"), "D2-H", c("d2H_malformedAndApprovedField…") + ", parser tests"],
+        ["D2-B", c("d2B_executingPendingProposal…"), "D2-I", c("d2I_unknownToolAndWrongBooking…")],
+        ["D2-C", c("d2C_approvedProposalCommitsOnce"), "D2-J", c("d2J_sixInvalidResponsesStopAtStepLimit")],
+        ["D2-D", c("d2D_repeatedExecutionIsDuplicate…"), "D2-K", c("d2K_providerFailureEndsWithProviderError")],
+        ["D2-E", c("d2E_rejectedProposalNeverExecutes"), "D2-L", c("d2L_boundaryTicksEmitAtMostOneWorkItem")],
+        ["D2-F", c("d2F_changedBookingVersionMakes…Stale"), "D2-M", c("d2M_backwardsClockIsRejected")],
+        ["D2-G", c("d2G_occupiedTarget…") + ", " + c("d2G_closedTarget…"), "D2-N", c("results/d2-live.txt")
+         + ": " + c("LIVE_RUN_PENDING_COURSE_ACCESS")],
+    ]))
+
+    s.append("<h2>8. Limitations</h2>")
     s.append("<ul>"
-             f"<li><b>Precondition:</b> none beyond the call. {c('targetId')} may be null, malformed or unknown; each "
-             f"case is handled.</li>"
-             f"<li><b>Postcondition on success:</b> {c('targetId')} is a valid identifier, names a known space, and "
-             f"{c('EligibilityPolicy.isEligible(booking, target)')} is true. A new {c('Proposal')} is appended to the "
-             f"stored proposals with id {c('\"P\" + n')} (n is the counter's previous value), booking id {c('B1')}, "
-             f"target {c('targetId')}, observed booking version equal to the booking's current version (0), observed "
-             f"policy version {c('policy.getVersion()')} (1), and status {c('PENDING')}. The method returns that "
-             f"proposal's {c('ProposalView')}.</li>"
-             f"<li><b>Postcondition on failure:</b> throws {c('IllegalArgumentException')} when {c('targetId')} is "
-             f"malformed, unknown or ineligible.</li>"
-             f"<li><b>Frame (what may change):</b> only the proposal list (one append) and the id counter (+1), and "
-             f"only on success. The booking (its space, version and every other field), every {c('Space')} and every "
-             f"existing proposal are unchanged in all cases.</li>"
-             "</ul>")
-    s.append(f"<h3>4.2 {c('EligibilityPolicy.isEligible(Booking booking, Space target): boolean')}</h3>")
-    s.append("<ul>"
-             f"<li><b>Precondition:</b> {c('booking')} and {c('target')} are non-null; otherwise "
-             f"{c('IllegalArgumentException')}.</li>"
-             f"<li><b>Postcondition:</b> returns true exactly when {c('!target.getId().equals(booking.getSpaceId())')}, "
-             f"{c('target.isOpen()')} and {c('!target.isOccupied()')}. {c('booking.requiresAccessible()')} does not "
-             f"affect the result under version 1. For the fixture, B12 and C03 are eligible; A17 and D09 are not.</li>"
-             f"<li><b>Frame:</b> changes nothing; it is a query.</li>"
+             f"<li><b>No live transcript yet.</b> No course-supported endpoint was configured, so D2-N is recorded as "
+             f"{c('LIVE_RUN_PENDING_COURSE_ACCESS')}. The live route was exercised only against a local fake endpoint "
+             f"during development; that is not a model run and is not reported as one.</li>"
+             f"<li><b>Sequential and in memory.</b> One process, one fixture, nothing survives a restart; the "
+             f"check-then-commit in {c('execute')} is not safe under concurrent callers.</li>"
+             f"<li><b>Policy version cannot change in D2,</b> so only the booking-version half of {c('STALE')} is "
+             f"exercised; D3's policy 2 will exercise the other half. Accessibility is still ignored, as policy 1 requires.</li>"
+             f"<li><b>Work items are reported, not acted on.</b> {c('tick')} returns them; starting an agent run for "
+             f"one is left to the operator.</li>"
+             f"<li><b>D1's {c('propose')} still throws {c('IllegalArgumentException')}</b> for a bad target, because the "
+             f"supplied public checks expect it; the loop converts it into a tool error.</li>"
              "</ul>")
 
-    s.append("<h2>5. Most important current limitation</h2>")
-    s.append(f"<p>A proposal stops at {c('PENDING')} and nothing re-checks it. There is no operator approval, "
-             f"rejection or execution yet, so the observed booking and policy versions stored in each proposal are "
-             f"never compared with the current state, and a proposal that has gone stale cannot be detected. Every "
-             f"rejection is also the same {c('IllegalArgumentException')}, distinguished only by its message. D2 must "
-             f"add the operator actions, revalidate versions and eligibility inside one sequential boundary before "
-             f"committing, and return distinct outcomes ({c('NOT_APPROVED')}, {c('STALE')}, "
-             f"{c('UNAVAILABLE_OR_INELIGIBLE')}, {c('COMMITTED')}, {c('DUPLICATE')}).</p>")
-    s.append("<p>Other limitations: one in-memory fixture with no persistence; a single sequential process, so no "
-             "safety under concurrent access; and accessibility is deliberately ignored until policy version 2 in D3.</p>")
+    s.append("<h2>9. Reused infrastructure and corrections</h2>")
+    s.append(f"<p><b>Reused unchanged from the starter:</b> {c('ChatMessage')}, {c('Fixture')}, {c('MiniJson')}, "
+             f"{c('ModelProvider')}, {c('OllamaProvider')}, {c('ProposalView')}, {c('ReplayProvider')}, the build "
+             f"scripts, {c('data/')} and the supplied checks. {c('Main')} keeps the starter's mode structure: "
+             f"{c('scripted')} (and its alias {c('agent-scripted')}) is now the D2 demonstration, {c('scripted-d1')} "
+             f"keeps the D1 regression demonstration, and {c('live')} asks the operator before anything is approved. "
+             f"<b>D1 correction:</b> the D1 {c('DESIGN.pdf')} had been corrupted after printing (blank pages); it was "
+             f"rebuilt from its unchanged build script, as recorded in {c('CHANGELOG.md')}. The D1 document is kept "
+             f"separately as {c('design/DESIGN_D1.pdf')} (built by {c('design/build_d1.py')}); this file is the D2 "
+             f"design.</p>")
 
-    s.append("<h2>6. Reused infrastructure and implemented parts</h2>")
-    s.append(f"<p><b>Reused unchanged from the 2026-09-15 starter:</b> {c('ChatMessage')}, {c('Fixture')}, "
-             f"{c('MiniJson')}, {c('ModelProvider')}, {c('OllamaProvider')}, {c('ProposalView')}, {c('ReplayProvider')}, "
-             f"the build scripts ({c('run.sh')}, {c('run.ps1')}, {c('setup-junit.sh')}, {c('setup-junit.ps1')}), "
-             f"{c('data/')} and the supplied checks ({c('PublicChecks')}, {c('InfrastructureChecks')}, "
-             f"{c('SuppliedChecksTest')}, {c('InfrastructureTest')}).</p>")
-    s.append(f"<p><b>Implemented for D1:</b> {c('Booking')}, {c('Space')}, {c('Proposal')}, {c('ProposalStatus')} and "
-             f"{c('EligibilityPolicy')}; the two validators in {c('DomainRules')}; the domain storage, snapshots and "
-             f"{c('propose')} in {c('StudentApplication')} (its {c('run')} method remains the D2 placeholder); the "
-             f"three-target {c('scripted')} demonstration in {c('Main')}; and 40 JUnit tests in {c('StudentTests')}.</p>")
+    figs = [
+        ("Figure 1.", "Class diagram: coordination, storage and domain rules.", class_diagram_core()),
+        ("Figure 2.", "Class diagram: the model/tool loop, the protocol classes and the provider boundary.",
+         class_diagram_agent()),
+        ("Figure 3.", "Sequence diagram: the replayed run reads B1, lists B12 and C03 and proposes B12, stopping at "
+                      "the approval boundary (<code>run scripted</code>, step 2).", sequence_run()),
+        ("Figure 4.", "Sequence diagram: operator approval, execution with re-checks and commit, and the repeated "
+                      "execution (<code>run scripted</code>, steps 4–5).", sequence_execute()),
+        ("Figure 5.", "State diagram: proposal statuses and the outcome of each operator command.", state_diagram()),
+    ]
+    for num, cap, svg in figs:
+        s.append(f'<section class="fig"><p class="cap"><b>{num}</b> {cap}</p>{svg}</section>')
 
-    s.append("<h2>7. Testing</h2>")
-    s.append(f"<p>{c('bash run.sh check')} runs the 14 supplied public checks as plain Java, and {c('bash run.sh test')} "
-             f"runs 55 JUnit Jupiter tests: the same 14 checks, the infrastructure test and 40 student tests. All pass "
-             f"({c('results/d1.txt')}, 4 October 2026). Every rejection test asserts the unchanged booking, occupancy "
-             f"and proposal list after the exception, not only that an exception was thrown. {c('TEST_PLAN.md')} maps "
-             f"acceptance cases D1-A to D1-F to their tests.</p>")
-
-    s.append('<section class="fig"><p class="cap"><b>Figure 1.</b> Class diagram: the D1 domain and application '
-             'classes and the starter classes they use.</p>' + class_diagram() + "</section>")
-    s.append('<section class="fig"><p class="cap"><b>Figure 2.</b> Sequence diagram: reading B1, evaluating B12 and '
-             'creating pending proposal P1 (<code>bash run.sh run scripted</code>, first request), with the approval '
-             'boundary.</p>' + sequence_diagram() + "</section>")
-
-    return ('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>ParkOps D1 Design</title>'
+    return ('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>ParkOps D2 Design</title>'
             f"<style>{CSS}</style></head><body>{''.join(s)}</body></html>")
 
 
