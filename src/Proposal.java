@@ -62,14 +62,14 @@ public final class Proposal{
         if(status != ProposalStatus.PENDING){
             throw new IllegalStateException("Only a PENDING proposal can be rejected, status is: " + status);
         }
-        status = ProposalStatus.REJECTED; // approve the proposal status 
+        status = ProposalStatus.REJECTED; // reject the proposal
     }
 
     public void markExecuted(){
         if(status != ProposalStatus.APPROVED){
-            throw new IllegalStateException("Only a APPROVED request can be marked EXECUTED, status is: " + status);
+            throw new IllegalStateException("Only an APPROVED proposal can be marked EXECUTED, status is: " + status);
         }
-        status = ProposalStatus.EXECUTED; // approve the proposal status 
+        status = ProposalStatus.EXECUTED; // mark the proposal executed
     }
     // Converts to the starter's ProposalView, which stores the status as a String
     public ProposalView toView(){

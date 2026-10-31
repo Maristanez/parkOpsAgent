@@ -51,6 +51,11 @@ public final class Booking{
         return new Booking(id, newSpaceId, durationHours, version + 1, requiresAccessible);
     }
 
+    // Returns a copy with a new duration and the version raised by one; this booking is unchanged
+    public Booking withDuration(int newDurationHours){
+        return new Booking(id, spaceId, newDurationHours, version + 1, requiresAccessible);
+    }
+
     
 
 }

@@ -36,7 +36,7 @@ public final class Space{
     // car takes space, refuses a space if taken
     public void occupy(){
         if(occupied){
-            throw new IllegalStateException("Space " + id + "is already occupied");
+            throw new IllegalStateException("Space " + id + " is already occupied");
         }
         occupied = true; 
     }
