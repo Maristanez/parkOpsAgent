@@ -1,0 +1,13 @@
+ParkOps D2-N live-model status: LIVE_RUN_PENDING_COURSE_ACCESS
+Date: Fri Oct 30 14:11:37 EDT 2026
+Environment: Darwin 25.5.0
+
+No course-supported model endpoint or model configuration was available for this submission:
+OLLAMA_CHAT_URL and OLLAMA_MODEL were not set on the machine used. No paid access was bought,
+no transcript has been fabricated, and no replay output is labelled as a live run.
+The live route (OllamaProvider through StudentApplication.run, with the operator prompt in
+Main) is implemented and will be run in the announced course-supported session.
+
+$ bash run.sh run live
+LIVE_RUN_PENDING_COURSE_ACCESS: configure the course-provided OLLAMA_CHAT_URL and OLLAMA_MODEL.
+(exit status 2)

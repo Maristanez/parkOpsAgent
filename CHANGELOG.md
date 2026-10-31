@@ -47,3 +47,45 @@ Record D1 implementation, D1 feedback fixes, D2 additions and D3 changes here.
   pages): it had been re-saved as UTF-8 text after Chrome printed it, which replaced every
   non-ASCII byte. Content is unchanged; the regenerated `design/DESIGN.html` is identical to the
   committed one.
+
+### D2
+- 2026-10-30: `Proposal` gained controlled transitions: `approve()` and `reject()` only from
+  `PENDING`, `markExecuted()` only from `APPROVED`; anything else throws `IllegalStateException`
+  and leaves the status unchanged. Tests cover every status × method.
+- 2026-10-30: `Booking.movedTo(String)` and `Booking.withDuration(int)` return validated copies
+  with the version raised by one. `Space` keeps `id` and `accessible` final and changes `open`
+  and `occupied` only through `occupy()` (refuses a taken space), `release()` and `close()`.
+- 2026-10-30: Added `ExecutionOutcome` (`NOT_APPROVED`, `STALE`, `UNAVAILABLE_OR_INELIGIBLE`,
+  `COMMITTED`, `DUPLICATE`).
+- 2026-10-30: D2.1 model/tool loop: `Tool`, `ToolRequest` and `ToolRequestParser` (strict
+  three-string-property requests, known tools, goal booking B1, `targetId` rules);
+  `AgentRunner`, `AgentResult` and `AgentOutcome`. `StudentApplication.run` now returns
+  `AgentResult`, enforces the 1–6 call limit, keeps the observation history, counts invalid
+  replies, answers rule-breaking requests with `TOOL_ERROR` (read → list → propose order, stale
+  versions, ineligible targets), and ends with `AWAITING_APPROVAL`, `NO_ACTION`, `STEP_LIMIT`
+  or `PROVIDER_ERROR`. Added `policyVersion()`, `alternatives()` and `spaceIds()`.
+- 2026-10-30: D2.2 approval and execution: storage moved into `ParkingStore` with
+  `CommitRecord` and `Notification` records. Added operator `approve`, `reject` and `execute`,
+  `commitCount()`, `notifications()`, and the setup actions `changeBookingDuration`,
+  `closeSpace` and `occupySpace`. `execute` checks identity, duplicate, approval, versions and
+  current eligibility in that order and commits exactly once.
+- 2026-10-30: D2.3 periodic detection: `tick(long)` and `retry(String)` via `PeriodicChecker`
+  and `WorkItem`: 60-second boundaries, backwards clock rejected, one work item per
+  booking/policy version pair, suppression while a proposal is active, conservative retry.
+- 2026-10-30: `Main`: `scripted` is now the D2 demonstration with
+  the state after every step; the D1 demonstration moved to `scripted-d1`; `live` asks the
+  operator before approving or executing anything.
+- 2026-10-30: Tests: `StudentTests` now has 114 tests covering D2-A to D2-M with before/after
+  protected-state assertions; all D1 tests kept.
+- 2026-10-30: Rewrote `DESIGN.pdf` for D2 (4 pages of text, two class diagrams, two sequence
+  diagrams split at the approval boundary, and the proposal-state diagram) via
+  `python3 design/build.py`; updated `README.md`, `TEST_PLAN.md` and `AI_USE.md`; recorded
+  `results/d2.txt` and the `LIVE_RUN_PENDING_COURSE_ACCESS` status in `results/d2-live.txt`.
+- 2026-10-30: Fixes from an independent review against the D2 brief: the propose tool now
+  refuses a second active proposal for the same booking/policy version; tick boundaries follow
+  the 60-second grid from the first tick instead of drifting; `execute` recognises `DUPLICATE`
+  before any other check; new tests prove tick 59 does not scan and tick 60 does, and cover the
+  stale-version check before propose. The scripted demo's tick trace shows a boundary scan.
+- 2026-10-30: Kept the D1 design document separately as `design/DESIGN_D1.pdf` (and
+  `design/DESIGN_D1.html`), built by `design/build_d1.py` (the D1 script with its own output
+  names). `DESIGN.pdf` in the root is the D2 document, as the submission rules require.

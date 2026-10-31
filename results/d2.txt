@@ -1,0 +1,98 @@
+ParkOps D2 evidence. Genuine output captured by running the commands below from the project root.
+Date: Fri Oct 30 14:11:33 EDT 2026
+Environment: Darwin 25.5.0
+openjdk version "21.0.12.1" 2026-08-18
+OpenJDK Runtime Environment Homebrew (build 21.0.12.1)
+OpenJDK 64-Bit Server VM Homebrew (build 21.0.12.1, mixed mode, sharing)
+
+$ bash run.sh compile
+COMPILE_OK (warnings, if any, are printed above)
+
+$ bash run.sh check        # plain-Java public checks, not JUnit
+PASS duration endpoints
+PASS invalid duration 0
+PASS invalid duration 25
+PASS invalid duration -1
+PASS invalid identifier null
+PASS invalid identifier 
+PASS invalid identifier b1
+PASS invalid identifier 1B
+PASS invalid identifier ABCDEFGHIJKLMNOPQ
+PASS valid identifiers
+PASS D1-C pending B12, no booking change
+PASS D1-D occupied D09 rejected unchanged
+PASS D1-E unknown target rejected unchanged
+PASS D1-F protected snapshot
+CHECKS 14; FAILED 0
+
+$ bash run.sh test         # JUnit Jupiter 6.0.3
+
+Thanks for using JUnit! Support its development at https://junit.org/sponsoring
+
+INFRASTRUCTURE_CHECKS_PASS 31; localhost fake HTTP only; no live model or project solution verified.
+
+Test run finished after 196 ms
+[         7 containers found      ]
+[         0 containers skipped    ]
+[         7 containers started    ]
+[         0 containers aborted    ]
+[         7 containers successful ]
+[         0 containers failed     ]
+[       129 tests found           ]
+[         0 tests skipped         ]
+[       129 tests started         ]
+[         0 tests aborted         ]
+[       129 tests successful      ]
+[         0 tests failed          ]
+
+
+$ bash run.sh run scripted # replay (ReplayProvider), not a live model run; includes the tick trace
+SCRIPTED D2 DEMO: replayed model responses (ReplayProvider), not a live model run.
+Operator actions below are explicit scripted commands; the agent run never approves or executes.
+
+== 1. Periodic ticks (time is supplied; nothing waits)
+tick(0) -> [WorkItem[bookingId=B1, bookingVersion=0, policyVersion=1, detectedAt=0]] (first tick scans: B1 is on closed A17)
+tick(59) -> [] (before the 60-second boundary: no scan)
+tick(60) -> [] (boundary scan; this booking/policy version pair was already emitted)
+OPERATOR retry(B1): the pair may be emitted again at the next scan
+tick(119) -> [] (before the 120 boundary: no scan)
+tick(120) -> [WorkItem[bookingId=B1, bookingVersion=0, policyVersion=1, detectedAt=120]] (boundary scan emits again after the retry)
+
+== 2. Agent run: replay read -> list -> propose B12 (limit 6)
+  [system] You resolve parking bookings by calling tools. Reply with exactly one JSON object and nothing else: {"tool":"<TOOL>","bookingId":"B1","targetId":"<SPACE or empty>"}. Tools: READ_BOOKING (targetId empty) returns the booking and policy version; LIST_ALTERNATIVES (targetId empty, after READ_BOOKING) returns eligible spaces; PROPOSE_REASSIGNMENT (targetId = one listed space, after LIST_ALTERNATIVES) creates a proposal that a human operator must approve; FINISH (targetId empty) stops without changes. You cannot approve or execute anything.
+  [user] Goal: Resolve the booking affected by the closure of A17. Goal booking: B1.
+  [assistant] {"tool":"READ_BOOKING","bookingId":"B1","targetId":""}
+  [user] {"status":"OK","tool":"READ_BOOKING","booking":{"id":"B1","spaceId":"A17","durationHours":3,"version":0,"requiresAccessible":true},"policyVersion":1}
+  [assistant] {"tool":"LIST_ALTERNATIVES","bookingId":"B1","targetId":""}
+  [user] {"status":"OK","tool":"LIST_ALTERNATIVES","alternatives":["B12","C03"]}
+  [assistant] {"tool":"PROPOSE_REASSIGNMENT","targetId":"B12","bookingId":"B1"}
+  [user] {"status":"AWAITING_APPROVAL","proposalId":"P1"}
+outcome AWAITING_APPROVAL; calls 3; invalid 0; proposal P1
+STATE booking B1 A17/v0 | A17=occupied B12=free C03=free D09=occupied | proposals P1->B12:PENDING | commits 0 | notifications 0
+
+== 3. Execute before approval
+execute(P1) -> NOT_APPROVED
+STATE booking B1 A17/v0 | A17=occupied B12=free C03=free D09=occupied | proposals P1->B12:PENDING | commits 0 | notifications 0
+
+== 4. OPERATOR approves, then execute
+approve(P1) -> APPROVED
+execute(P1) -> COMMITTED
+STATE booking B1 B12/v1 | A17=free B12=occupied C03=free D09=occupied | proposals P1->B12:EXECUTED | commits 1 | notifications 1
+notification: Booking B1 moved from A17 to B12 (proposal P1)
+
+== 5. Execute the same proposal again
+execute(P1) -> DUPLICATE
+STATE booking B1 B12/v1 | A17=free B12=occupied C03=free D09=occupied | proposals P1->B12:EXECUTED | commits 1 | notifications 1
+
+== 6. Ticks after the commit, and a backwards clock
+tick(180) -> [] (B1 is on open B12, so nothing is affected)
+tick(30) -> REJECTED: clock went backwards: tick 30 is before 180
+
+== 7. Rejected paths, each on a fresh application
+reject(P1), execute -> NOT_APPROVED; booking A17/v0, commits 0
+approve(P1), booking version changed, execute -> STALE; booking A17/v1, commits 0
+approve(P1), B12 occupied, execute -> UNAVAILABLE_OR_INELIGIBLE; booking A17/v0, commits 0
+six invalid replies -> STEP_LIMIT after 6 calls, 6 invalid; proposals 0
+  first rejection sent back to the model: {"status":"REJECTED","reason":"unexpected property: approved"}
+second agent run while P1 is PENDING -> NO_ACTION; proposals 1
+  propose answer: {"status":"TOOL_ERROR","reason":"proposal P1 is already waiting for the operator for this booking and policy version; no new proposal is issued"}
